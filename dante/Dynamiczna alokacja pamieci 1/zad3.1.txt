@@ -1,0 +1,24 @@
+Alokacja i wypełnianie
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main() {
+    int *tab;
+    tab = (int*)malloc(100*sizeof(int));
+    if(!tab){
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    for(int i=0;i<100;i++){
+        *(tab+i)=i;
+    }
+    for(int i=0;i<100;i++){
+        printf("%d ",*(tab+i));
+    }
+    free(tab);
+    return 0;
+}

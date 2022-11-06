@@ -1,0 +1,142 @@
+Sortowanie liczb 1D
+
+main.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "comparators.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int main()
+{
+    int (**funcs)(int, int) = malloc(32);
+    if (!funcs) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    *(funcs) = comp_int;
+    *(funcs+1) = comp_int_abs;
+    *(funcs+2) = comp_int_length;
+    *(funcs+3) = comp_int_digits_sum;
+    printf("Podaj dlugosc tablicy: ");
+    int size;
+    int err = scanf("%d", &size);
+    if (err != 1) {
+        printf("Incorrect input");
+        free(funcs);
+        return 1;
+    }
+    if (size <= 0) {
+        printf("Incorrect input data");
+        free(funcs);
+        return 2;
+    }
+    int *array = malloc(size * sizeof(int));
+    if (!array) {
+        printf("Failed to allocate memory");
+        free(funcs);
+        return 8;
+    }
+    printf("Podaj liczby: ");
+    for (int i = 0; i < size; ++i) {
+        err = scanf("%d", array+i);
+        if (err != 1) {
+            printf("Incorrect input");
+            free(funcs);
+            free(array);
+            return 1;
+        }
+    }
+    printf("Podaj rodzaj operacji: ");
+    int op;
+    err = scanf("%d", &op);
+    if (err != 1) {
+        printf("Incorrect input");
+        free(funcs);
+        free(array);
+        return 1;
+    }
+    if (op < 0 || op > 3) {
+        printf("Incorrect input data");
+        free(funcs);
+        free(array);
+        return 2;
+    }
+    sort_int(array, size, *(funcs+op));
+    for (int i = 0; i < size; ++i) {
+        printf("%d ", *(array+i));
+    }
+    free(funcs);
+    free(array);
+    return 0;
+}
+
+
+comparators.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "comparators.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int comp_int(int a, int b)
+{
+    return a - b;
+}
+int comp_int_abs(int a, int b)
+{
+    return abs(a) - abs(b);
+}
+int comp_int_length(int a, int b)
+{
+    a = abs(a); b = abs(b);
+    int len_a = 1, len_b = 1;
+    while (a || b) {
+        a/=10; b/=10;
+        if (a) len_a++;
+        if (b) len_b++;
+    }
+    return len_a - len_b;
+}
+int comp_int_digits_sum(int a, int b)
+{
+    a = abs(a); b = abs(b);
+    int sum_a = 0, sum_b = 0;
+    while (a || b) {
+        sum_a += a%10;
+        sum_b += b%10;
+        a/=10; b/=10;
+    }
+    return sum_a - sum_b;
+}
+int sort_int(int* ptr, int size, int(*func_name)(int, int))
+{
+    if (!ptr || !func_name || size<=0) return 1;
+    for (int i = 0; i < size; ++i) {
+        for (int j = 1; j < size; ++j) {
+            if (func_name(*(ptr+j-1), *(ptr+j)) > 0) {
+                int tmp = *(ptr+j-1);
+                *(ptr+j-1) = *(ptr+j);
+                *(ptr+j) = tmp;
+            }
+        }
+    }
+    return 0;
+}
+
+comparators.h
+
+#ifndef COMPARATORS
+#define COMPARATORS
+
+int comp_int(int a, int b);
+int comp_int_abs(int a, int b);
+int comp_int_length(int a, int b);
+int comp_int_digits_sum(int a, int b);
+int sort_int(int* ptr, int size, int(*func_name)(int, int));
+
+#endif

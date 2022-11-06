@@ -1,0 +1,118 @@
+Makra i bity
+Przygotuj makra do:
+
+Obliczania liczby ustawionych i wyzerowanych bitów w liczbie przekazanej do makra. Makro powinno przyjąć liczbę całkowitą, dla której ma zostać wyznaczona statystyka i dwa wskaźniki na liczby całkowite, do której ma zostać zapisany wynik.
+Przykład wywołania:
+
+
+
+	functions.h
+#ifndef FUNCS
+#define FUNCS
+
+#include <stdint.h>
+
+#define COUNT_BITS(value, pointer_to_bits_set_counter, pointer_to_bits_cleared_counter)\
+{\
+*(pointer_to_bits_set_counter) = 0;\
+*(pointer_to_bits_cleared_counter) = 0;\
+for(uint64_t i = (uint64_t)1 << (sizeof(value) * 8 - 1); i > 0; i /= 2) {\
+        if (i & value) *(pointer_to_bits_set_counter) += 1;\
+        else *(pointer_to_bits_cleared_counter) += 1;\
+    }\
+}
+#define DISPLAY_BITS(value)\
+{\
+for(uint64_t i = (uint64_t)1 << (sizeof(value) * 8 - 1); i > 0; i /= 2) {\
+        if (i & value) printf("1");\
+        else printf("0");\
+    }\
+}
+#define REVERSE_BITS(pointer_to_variable)\
+{\
+    uint64_t reverse = 0;\
+    uint64_t free_bits = 8*sizeof(*pointer_to_variable) - 1;\
+    while (*pointer_to_variable)\
+    {\
+        reverse |= *pointer_to_variable & 1;\
+        *pointer_to_variable=*pointer_to_variable >> 1;\
+        if (!*pointer_to_variable) break;\
+        reverse=reverse << 1;\
+        free_bits --;\
+    }\
+    *pointer_to_variable = (reverse << free_bits);\
+}
+
+#endif
+
+	main.c
+
+
+#include <stdio.h>
+#include "functions.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    printf("Enter data type: ");
+    int type;
+    int err = scanf("%d", &type);
+    if (err != 1) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (type == 0) {
+        printf("Enter an integer number: ");
+        uint32_t x;
+        err = scanf("%u", &x);
+        if (err != 1) {
+            printf("Incorrect input");
+            return 1;
+        }
+        int set, cleared;
+        COUNT_BITS(x, &set, &cleared);
+        printf("%d\n%d\n", set, cleared);
+        DISPLAY_BITS(x);
+        printf("\n");
+        REVERSE_BITS(&x);
+        DISPLAY_BITS(x);
+    }
+    else if (type == 1) {
+        printf("Enter an integer number: ");
+        uint16_t x;
+        err = scanf("%hu", &x);
+        if (err != 1) {
+            printf("Incorrect input");
+            return 1;
+        }
+        int set, cleared;
+        COUNT_BITS(x, &set, &cleared);
+        printf("%d\n%d\n", set, cleared);
+        DISPLAY_BITS(x);
+        printf("\n");
+        REVERSE_BITS(&x);
+        DISPLAY_BITS(x);
+    }
+    else if (type == 2) {
+        printf("Enter an integer number: ");
+        uint64_t x;
+        err = scanf("%lu", &x);
+        if (err != 1) {
+            printf("Incorrect input");
+            return 1;
+        }
+        int set, cleared;
+        COUNT_BITS(x, &set, &cleared);
+        printf("%d\n%d\n", set, cleared);
+        DISPLAY_BITS(x);
+        printf("\n");
+        REVERSE_BITS(&x);
+        DISPLAY_BITS(x);
+    }
+    else {
+        printf("Incorrect input data");
+        return 2;
+    }
+    return 0;
+}

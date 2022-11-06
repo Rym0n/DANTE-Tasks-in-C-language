@@ -1,0 +1,151 @@
+ WYMAGANE	
+Dynamiczny stos - wszystko na opak
+
+
+main.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main(int argc, char **argv) {
+    if(argc == 1) {
+        printf("Not enough arguments");
+        return 9;
+    }
+    for(int i = 1; i < argc; ++i) {
+        struct stack_t *stack = NULL;
+        int err = stack_load(&stack, *(argv + i));
+        if(err == 2) {
+            printf("Couldn't open file %s\n", *(argv + i));
+            continue;
+        }
+        if(err == 3) {
+            printf("Failed to allocate memory");
+            return 8;
+        }
+        err = stack_save(stack, *(argv + i));
+        if(err == 2) {
+            printf("Couldn't create file");
+            stack_destroy(&stack);
+            return 5;
+        }
+        printf("File %s saved\n", *(argv + i));
+        stack_destroy(&stack);
+    }
+    return 0;
+}
+
+stack.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int stack_push(struct stack_t **stack, char *value)
+{
+    if (!stack || !value) return 1;
+    struct stack_t *head = malloc(sizeof(struct stack_t));
+    if (!head) return 2;
+    head->sentence = value;
+    head->prev = *stack;
+    *stack = head;
+    return 0;
+}
+char *stack_pop(struct stack_t **stack, int *err_code)
+{
+    if (!stack || !*stack || !(*stack)->sentence) {
+        if (err_code) *err_code = 1;
+        return NULL;
+    }
+    char *sentence = (*stack)->sentence;
+    struct stack_t *tmp = *stack;
+    if (err_code) *err_code = 0;
+    *stack = (*stack)->prev;
+    free(tmp);
+    return sentence;
+}
+void stack_destroy(struct stack_t **stack)
+{
+    if (!stack) return;
+    while (*stack) {
+        struct stack_t *tmp = *stack;
+        free(tmp->sentence);
+        *stack = tmp->prev;
+        free(tmp);
+    }
+}
+int stack_load(struct stack_t **stack, const char *filename)
+{
+    if(!stack || *stack || !filename) return 1;
+    FILE *f = fopen(filename, "r");
+    if(!f) return 2;
+    int N = 0;
+    while(!feof(f)) {
+        if(fgetc(f) == '.') N++;
+    }
+    fseek(f, 0, SEEK_SET);
+    for(int i = 0; i < N; ++i) {
+        char *sentence;
+        for (int size = 1; ; ++size) {
+            if (fgetc(f) == '.') {
+                sentence = calloc(1, size + 1);
+                if (!sentence) {
+                    stack_destroy(stack);
+                    fclose(f);
+                    return 3;
+                }
+                fseek(f, -size, SEEK_CUR);
+                break;
+            }
+        }
+        fscanf(f, "%[^.]s", sentence);
+        strcat(sentence, ".");
+        fgetc(f);
+        int err = stack_push(stack, sentence);
+        if(err == 2) {
+            free(sentence);
+            stack_destroy(stack);
+            fclose(f);
+            return 3;
+        }
+    }
+    fclose(f);
+    return 0;
+}
+int stack_save(const struct stack_t *stack, const char *filename)
+{
+    if(!stack || !filename) return 1;
+    FILE *f = fopen(filename, "w");
+    if(!f) return 2;
+    struct stack_t *tmp = (struct stack_t*)stack;
+    while (tmp) {
+        fprintf(f, "%s", tmp->sentence);
+        tmp = tmp->prev;
+    }
+    fclose(f);
+    return 0;
+}
+
+
+stack.h
+
+#ifndef STACK
+#define STACK
+
+struct stack_t
+{
+    char *sentence;
+    struct stack_t *prev;
+};
+int stack_push(struct stack_t **stack, char *value);
+char *stack_pop(struct stack_t **stack, int *err_code);
+void stack_destroy(struct stack_t **stack);
+int stack_load(struct stack_t **stack, const char *filename);
+int stack_save(const struct stack_t *stack, const char *filename);
+
+#endif

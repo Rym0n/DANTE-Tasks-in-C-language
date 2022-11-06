@@ -1,0 +1,172 @@
+Binarny plik tekstowy
+
+Napisz program, który zamienia dane w pliku z postaci dziesiętnej na dwójkową i odwrotnie.
+
+W tym celu przygotuj funkcje do:
+
+
+#include <stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int validate_binary(FILE *file) {
+    int counter = 0;
+    while (1) {
+        char c = fgetc(file);
+        if (feof(file)) {
+            if (counter == 0) {
+                return 1;
+            }
+            return 0;
+        }
+        counter = (counter + 1) % 8;
+        if (c != '1' && c != '0') {
+            return 0;
+        }
+    }
+}
+
+int decode(const char *input, const char *output) {
+    if (input == NULL || output == NULL) {
+        return 1;
+    }
+    FILE *file = fopen(input, "rt");
+    if (file == NULL) {
+        return 2;
+    }
+    if (!validate_binary(file)) {
+        fclose(file);
+        return 3;
+    }
+    fseek(file, 0, SEEK_SET);
+    FILE *outputFile = fopen(output, "wt");
+    if (outputFile == NULL) {
+        fclose(file);
+        return 4;
+    }
+    int counter = 0;
+    int number = 0;
+    while (1) {
+        char c = fgetc(file);
+        if (feof(file)) {
+            break;
+        }
+        counter = (counter + 1) % 8;
+        number = number * 2 + c - '0';
+        if (counter == 0) {
+            fprintf(outputFile, "%03d", number);
+            number = 0;
+        }
+    }
+    fclose(outputFile);
+    fclose(file);
+    return 0;
+}
+
+int validate_decimal(FILE *file) {
+    int counter = 0;
+    int number = 0;
+    while (1) {
+        char c = fgetc(file);
+        if (feof(file)) {
+            if (counter == 0) {
+                return 1;
+            }
+            return 0;
+        }
+        counter = (counter + 1) % 3;
+        if (c < '0' || c > '9') {
+            return 0;
+        }
+        number = number * 10 + c - '0';
+        if (counter == 0) {
+            if (number > 255) {
+                return 0;
+            }
+            number = 0;
+        }
+    }
+}
+
+int dec2bin(int n) {
+    if (n == 0) {
+        return 0;
+    }
+    return dec2bin(n / 2) * 10 + n % 2;
+}
+
+int encode(const char *input, const char *output) {
+    if (input == NULL || output == NULL) {
+        return 1;
+    }
+    FILE *file = fopen(input, "rt");
+    if (file == NULL) {
+        return 2;
+    }
+    if (!validate_decimal(file)) {
+        fclose(file);
+        return 3;
+    }
+    fseek(file, 0, SEEK_SET);
+    FILE *outputFile = fopen(output, "wt");
+    if (outputFile == NULL) {
+        fclose(file);
+        return 4;
+    }
+    int counter = 0;
+    int number = 0;
+    while (1) {
+        char c = fgetc(file);
+        if (feof(file)) {
+            break;
+        }
+        counter = (counter + 1) % 3;
+        number = number * 10 + c - '0';
+        if (counter == 0) {
+            number = dec2bin(number);
+            fprintf(outputFile, "%08d", number);
+            number = 0;
+        }
+    }
+    fclose(outputFile);
+    fclose(file);
+    return 0;
+}
+
+int main() {
+    char filename1[30];
+    char filename2[30];
+    char operation;
+    printf("Enter operation (D - bin to dec; E - dec to bin): ");
+    scanf("%c", &operation);
+    getchar();
+    if (operation != 'D' && operation != 'd' && operation != 'e' && operation != 'E') {
+        printf("Incorrect input data");
+        return 2;
+    }
+    printf("Enter input file name: ");
+    scanf("%29[^\n]", filename1);
+    getchar();
+    printf("Enter output file name: ");
+    scanf("%29[^\n]", filename2);
+    int ret;
+    if (operation == 'D' || operation == 'd') {
+        ret = decode(filename1, filename2);
+    } else {
+        ret = encode(filename1, filename2);
+    }
+    if (ret == 2) {
+        printf("Couldn't open file");
+        return 4;
+    }
+    if (ret == 4) {
+        printf("Couldn't create file");
+        return 5;
+    }
+    if (ret == 3) {
+        printf("File corrupted");
+        return 6;
+    }
+    printf("File saved");
+    return 0;
+}

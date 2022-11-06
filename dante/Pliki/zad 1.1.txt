@@ -1,0 +1,29 @@
+Pliki - pierwsze kroki
+
+#include <stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main(){
+    FILE *fp;
+    char nazwa_zmiennej[31];
+    int i;
+    int temp=0;
+    printf("Podaj sciezke do pliku:");
+    scanf("%30s",nazwa_zmiennej);
+    if((fp=fopen(nazwa_zmiennej,"r"))==NULL){
+        printf("Couldn't open file");
+        return 4;
+    }
+    for(;;){
+        i=fgetc(fp);
+        if(i==EOF) break;
+        putchar(i);
+        temp++;
+    }
+    if(temp==0){
+        printf("Nothing to show");
+    }
+fclose(fp);
+return 0;
+}

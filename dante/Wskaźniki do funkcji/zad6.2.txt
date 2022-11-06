@@ -1,0 +1,87 @@
+2. Funkcja zwracająca wskaźnik do funkcji
+
+
+int_operations.c
+
+#include "int_operations.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int add_int(int a, int b)
+{
+    return a+b;
+}
+
+int sub_int(int a, int b)
+{
+    return a-b;
+}
+
+int div_int(int a, int b)
+{
+    if(b) return a/b;
+    else return 0;
+}
+
+int mul_int(int a, int b)
+{
+    return a*b;
+}
+
+int (* get_function(enum operations_t calc))(int,int )
+{
+    int(*funcs[4])(int, int);
+    *funcs = add_int;
+    *(funcs+1) = sub_int;
+    *(funcs+2) = div_int;
+    *(funcs+3) = mul_int;
+    return  (*(funcs+calc));
+}
+
+int_operations.h
+
+#ifndef INT
+#define INT
+
+int add_int(int a, int b);
+int sub_int(int a, int b);
+int div_int(int a, int b);
+int mul_int(int a, int b);
+enum operations_t{op_add, op_sub, op_div , op_mul};
+int (* get_function(enum operations_t calc))(int,int );
+
+
+
+#endif
+
+
+main.c
+
+#include <stdio.h>
+#include "int_operations.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main() {
+
+    int fir , sec, cl;
+    printf("Enter numbers:  ");
+    if(scanf("%d %d", &fir, &sec) != 2){
+        printf("Incorrect input");
+        return 1;
+    }
+    printf("Choose an operation: ");
+    enum operations_t calc;
+    if(scanf("%d", &cl) != 1){
+        printf("Incorrect input");
+        return 1;
+    }
+    calc = cl;
+    if(calc!=0 && calc!=1 && calc!=2 && calc!=3){
+        printf("Incorrect input data");
+        return 2;
+    }
+
+    printf("%d",get_function(calc)(fir,sec));
+    return 0;
+}

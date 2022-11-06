@@ -1,0 +1,156 @@
+
+2. Dynamiczny stos
+
+
+main.c
+#include <stdio.h>
+#include <stdlib.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    struct stack_t *stack;
+    int err = stack_init(&stack);
+    if (err == 2) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    while (1) {
+        printf("Co chcesz zrobic? ");
+        int op;
+        err = scanf("%d", &op);
+        if (err != 1) {
+            printf("Incorrect input");
+            stack_destroy(&stack);
+            return 1;
+        }
+        if (op == 0) break;
+        else if (op == 1) {
+            printf("Podaj liczbe ");
+            int x;
+            err = scanf("%d", &x);
+            if (err != 1) {
+                printf("Incorrect input");
+                stack_destroy(&stack);
+                return 1;
+            }
+            err = stack_push(stack, x);
+            if (err == 2) {
+                printf("Failed to allocate memory");
+                stack_destroy(&stack);
+                return 8;
+            }
+        }
+        else if (op == 2) {
+            if (stack_empty(stack)) printf("Stack is empty\n");
+            else {
+                int x = stack_pop(stack, NULL);
+                printf("%d\n", x);
+            }
+        }
+        else if (op == 3) {
+            if (stack_empty(stack)) printf("1\n");
+            else printf("0\n");
+        }
+        else if (op == 4) {
+            if (stack_empty(stack)) printf("Stack is empty\n");
+            else {
+                stack_display(stack);
+                printf("\n");
+            }
+        }
+        else printf("Incorrect input data\n");
+    }
+    stack_destroy(&stack);
+    return 0;
+}
+
+stack.c
+#include <stdio.h>
+#include <stdlib.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int stack_init(struct stack_t **stack)
+{
+    if (!stack) return 1;
+    *stack = malloc(sizeof(struct stack_t));
+    if (!*stack) return 2;
+    (*stack)->head = NULL;
+    return 0;
+}
+int stack_push(struct stack_t *stack, int value)
+{
+    if (!stack) return 1;
+    struct node_t *node = malloc(sizeof(struct node_t));
+    if (!node) return 2;
+    node->data = value;
+    node->next = stack->head;
+    stack->head = node;
+    return 0;
+}
+void stack_display(const struct stack_t* stack)
+{
+    if (!stack) return;
+    struct node_t *tmp = stack->head;
+    while (tmp) {
+        printf("%d ", tmp->data);
+        tmp = tmp->next;
+    }
+}
+int stack_pop(struct stack_t* stack, int *err_code)
+{
+    if (!stack || !stack->head) {
+        if(err_code) *err_code = 1;
+        return 0;
+    }
+    if (err_code) *err_code = 0;
+    int value = stack->head->data;
+    struct node_t *tmp = stack->head;
+    stack->head = tmp->next;
+    free(tmp);
+    return value;
+}
+void stack_destroy(struct stack_t** stack)
+{
+    if (!stack) return;
+    int err = 0;
+    while (!err) {
+        stack_pop(*stack, &err);
+    }
+    free(*stack);
+    *stack = NULL;
+}
+int stack_empty(const struct stack_t* stack)
+{
+    if (!stack) return 2;
+    if (!stack->head) return 1;
+    return 0;
+}
+
+stack.h
+
+#ifndef STACK
+#define STACK
+
+struct stack_t
+{
+    struct node_t *head;
+};
+
+struct node_t
+{
+    int data;
+    struct node_t* next;
+};
+int stack_init(struct stack_t **stack);
+int stack_push(struct stack_t *stack, int value);
+void stack_display(const struct stack_t* stack);
+int stack_pop(struct stack_t* stack, int *err_code);
+void stack_destroy(struct stack_t** stack);
+int stack_empty(const struct stack_t* stack);
+
+#endif

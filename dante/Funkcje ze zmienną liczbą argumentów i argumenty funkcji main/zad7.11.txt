@@ -1,0 +1,39 @@
+Kopiowanie plików
+
+Napisz program do kopiowania zawartości dowolnych plików. Nazwa pliku źródłowego i docelowego zostanie przekazana w postaci parametrów wywołania programu.
+
+Program powinien zwracać następujące kody błędów:
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main(int argc, char **argv)
+{
+    if (argc < 3) {
+        printf("Not enough arguments");
+        return 9;
+    }
+    FILE *src = fopen(*(argv + 1), "rb");
+    if (!src) {
+        printf("Couldn't open file");
+        return 4;
+    }
+    FILE *dest = fopen(*(argv + 2), "wb");
+    if (!dest) {
+        printf("Couldn't create file");
+        fclose(src);
+        return 5;
+    }
+    while (!feof(src)) {
+        char c;
+        int err = fread(&c, sizeof(char), 1, src);
+        if (err == 1) fwrite(&c, sizeof(char), 1, dest);
+    }
+    printf("File copied");
+    fclose(src);
+    fclose(dest);
+    return 0;
+}

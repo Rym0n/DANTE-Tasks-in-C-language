@@ -1,0 +1,288 @@
+Macierz 2
+
+Rozbuduj program z zadania 4.4 Macierz o możliwość zapisu macierzy do pliku dyskowego w formacie binarnym oraz tekstowym. W tym celu przygotuj następujące funkcje:
+
+
+
+main.c
+
+#include "matrix_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int main() {
+
+    int width, height;
+
+    printf("Podaj wysokość i szerokość:");
+    if(scanf("%d %d", &width, &height)!=2)
+        return printf("Incorrect input"), 1;
+
+    if(width <1 || height < 1)
+        return printf("Incorrect input data"), 2;
+
+    struct matrix_t *m = matrix_create_struct(width, height);
+    if(m == NULL)
+        return printf("Failed to allocate memory"), 8;
+    printf("Podaj liczby: ");
+    if(matrix_read(m)!=0)
+        return printf("Incorrect input"), matrix_destroy_struct(&m), 1;
+
+    char *txt = (char*)calloc(40, sizeof(char));
+    if(!txt)
+        return printf("Failed to allocate memory"), matrix_destroy_struct(&m), 8;
+    printf("Podaj sciezke do pliku:");
+
+    while(getchar()!='\n');
+    fgets(txt,40,stdin);
+    if(strlen(txt)>39) while(getchar()!='\n');
+    if(*(txt+strlen(txt)-1)=='\n') *(txt+strlen(txt)-1)='\0';
+
+    struct matrix_t *t = matrix_transpose(m);
+    if(t==NULL)
+        return printf("Failed to allocate memory"), matrix_destroy_struct(&m), free(txt), 8;
+    if(*(txt+strlen(txt)-1) == 't' && *(txt+strlen(txt)-2) == 'x' && *(txt+strlen(txt)-3) == 't' && *(txt+strlen(txt)-4) == '.'){
+        if(matrix_save_t(t,txt)!=0)
+            return printf("Couldn't create file"), matrix_destroy_struct(&m),matrix_destroy_struct(&t),free(txt), 5;
+    }
+    else if(*(txt+strlen(txt)-1) == 'n' && *(txt+strlen(txt)-2) == 'i' && *(txt+strlen(txt)-3) == 'b' && *(txt+strlen(txt)-4) == '.'){
+        if(matrix_save_b(t,txt)!=0)
+            return printf("Couldn't create file"), matrix_destroy_struct(&m), matrix_destroy_struct(&t), free(txt), 5;
+    }
+    else{
+        return printf("Unsupported file format"), matrix_destroy_struct(&m),matrix_destroy_struct(&t), free(txt), 7;
+    }
+
+    printf("File saved");
+    matrix_destroy_struct(&m);
+    matrix_destroy_struct(&t);
+    free(txt);
+    return 0;
+
+
+}
+
+matrix_utils.c
+
+//
+// Created by root on 6/26/21.
+//
+
+#include "matrix_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+void matrix_destroy(struct matrix_t *m) {
+    if (m == NULL) {
+        return;
+    }
+    int **ptr = m->ptr;
+    if (ptr != NULL) {
+        int i;
+        for (i = 0; i < m->height; i++) {
+            free(*(ptr + i));
+        }
+        free(ptr);
+    }
+}
+
+int matrix_create(struct matrix_t *m, int width, int height) {
+    if (m == NULL || width < 1 || height < 1) {
+        return 1;
+    }
+    m->ptr = malloc(sizeof(int *) * height);
+    if (m->ptr == NULL) {
+        return 2;
+    }
+    int i;
+    for (i = 0; i < height; i++) {
+        *(m->ptr + i) = malloc(sizeof(int) * width);
+        if (*(m->ptr + i) == NULL) {
+            m->height = i;
+            matrix_destroy(m);
+            return 2;
+        }
+    }
+    m->height = height;
+    m->width = width;
+    return 0;
+}
+
+int matrix_read(struct matrix_t *m) {
+    if (m == NULL || m->ptr == NULL || m->height < 1 || m->width < 1) {
+        return 1;
+    }
+    int i, j;
+    for (i = 0; i < m->height; i++) {
+        for (j = 0; j < m->width; j++) {
+            if (scanf("%d", (*(m->ptr + i) + j)) != 1) {
+                return 2;
+            }
+        }
+    }
+    return 0;
+}
+
+void matrix_display(const struct matrix_t *m) {
+    if (m == NULL || m->ptr == NULL || m->height < 1 || m->width < 1) {
+        return;
+    }
+    int i, j;
+    for (i = 0; i < m->height; i++) {
+        for (j = 0; j < m->width; j++) {
+            printf("%d ", *(*(m->ptr + i) + j));
+        }
+        printf("\n");
+    }
+}
+
+struct matrix_t* matrix_create_struct(int width, int height){
+    if(width <= 0 || height <=0)
+        return NULL;
+
+    struct matrix_t *wsk = (struct matrix_t*)calloc(1, sizeof(struct matrix_t));
+    if(wsk==NULL)
+        return wsk;
+
+    wsk->ptr = (int**) calloc(height,sizeof(int*));
+    if(!wsk->ptr){
+        free(wsk);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < height ; i++){
+        *(wsk->ptr+i) = (int*) calloc(width,sizeof(int));
+        if(!(*(wsk->ptr+i))){
+            for(int j = i-1 ; j>=0 ; j--){
+                free(*(wsk->ptr+j));
+            }
+            free(wsk->ptr);
+            free(wsk);
+            return NULL;
+        }
+    }
+    wsk->height = height;
+    wsk->width = width;
+    return wsk;
+}
+
+void matrix_destroy_struct(struct matrix_t **m){
+    if(!m)
+        return;
+    for(int i = 0 ; i< (*m)->height ; i++){
+        free(*((*m)->ptr+i));
+    }
+    free((*m)->ptr);
+    free((*m));
+    *m=NULL;
+}
+
+struct matrix_t* matrix_transpose(const struct matrix_t *m){
+    if(m==NULL || m->ptr == NULL || m->height < 1 || m->width < 1){
+        return NULL;
+    }
+
+    struct matrix_t * wsk = matrix_create_struct(m->height, m->width);
+    if(!wsk){
+        return NULL;
+    }
+
+    for(int i = 0 ; i< wsk->height ; i++){
+        for(int j = 0 ; j < wsk->width ; j++){
+            *(*(wsk->ptr+i)+j) = *(*(m->ptr+j)+i);
+        }
+    }
+    return wsk;
+}
+
+int matrix_save_b(const struct matrix_t *m, const char *filename){
+    if(!m || !filename || m->width < 1 || m->height < 1 || m->ptr ==NULL)
+        return 1;
+    FILE *f = fopen(filename, "wb");
+    if(!f)
+        return 2;
+
+    if(fwrite(&(m->width),sizeof(int), 1, f)!=1){
+        fclose(f);
+        return 3;
+    }
+    if(fwrite(&(m->height),sizeof(int), 1, f)!=1){
+        fclose(f);
+        return 3;
+    }
+    for(int i = 0 ; i < m->height ; i++){
+        for(int j = 0 ; j < m->width ; j++){
+            int a = *(*(m->ptr+i)+j);
+            if(fwrite(&a, sizeof(int), 1, f)!=1){
+                return fclose(f), 3;
+            }
+        }
+    }
+
+    fclose(f);
+    return 0;
+}
+
+int matrix_save_t(const struct matrix_t *m, const char *filename){
+    if(!m || !filename || m->width < 1 || m->height < 1 || m->ptr ==NULL)
+        return 1;
+    FILE * f = fopen(filename, "w");
+    if(!f)
+        return 2;
+    if(fprintf(f,"%d %d\n", m->width, m->height) <= 0){
+        return fclose(f), 3;
+    }
+
+    for(int i = 0 ; i < m->height ; i++){
+        for(int j = 0 ; j < m->width ; j++){
+            int a = *(*(m->ptr+i)+j);
+            if(fprintf(f, "%d ", a) <= 0){
+                return fclose(f), 3;
+            }
+        }
+        fprintf(f,"\n");
+    }
+    fclose(f);
+    return 0;
+}
+
+
+
+
+
+
+
+.	matrix_utils.h
+
+
+//
+// Created by root on 6/26/21.
+//
+
+#ifndef PROJECT1_MATRIX_UTILS_H
+#define PROJECT1_MATRIX_UTILS_H
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+struct matrix_t{
+    int **ptr;
+    int width;
+    int height;
+};
+
+int matrix_create(struct matrix_t *m, int width, int height);
+int matrix_read(struct matrix_t *m);
+void matrix_display(const struct matrix_t *m);
+void matrix_destroy(struct matrix_t *m);
+struct matrix_t* matrix_create_struct(int width, int height);
+
+void matrix_destroy_struct(struct matrix_t **m);
+
+struct matrix_t* matrix_transpose(const struct matrix_t *m);
+
+int matrix_save_b(const struct matrix_t *m, const char *filename);
+int matrix_save_t(const struct matrix_t *m, const char *filename);
+#endif //PROJECT1_MATRIX_UTILS_H

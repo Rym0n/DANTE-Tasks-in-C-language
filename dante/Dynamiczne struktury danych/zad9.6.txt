@@ -1,0 +1,152 @@
+Dynamiczny stos - z dziesiętnych na binarne
+Wykorzystując strukturę oraz funkcje z zadania 9.2 Dynamiczny stos napisz program, który pobierze od użytkownika liczbę i wyświetli ją na ekranie w postaci binarnej.
+
+
+
+
+
+
+	main.c
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    struct stack_t *stack;
+    int err = stack_init(&stack);
+    if (err == 2) {
+        printf("Failed to allocate memory");
+        stack_destroy(&stack);
+        return 8;
+    }
+    printf("Enter number: ");
+    uint64_t n;
+    err = scanf("%lu", &n);
+    if (err != 1) {
+        printf("Incorrect input");
+    stack_destroy(&stack);
+        return 1;
+    }
+    do {
+        err = stack_push(stack, n%2);
+        if (err == 2) {
+            printf("Failed to allocate memory");
+            stack_destroy(&stack);
+            return 8;
+        }
+        n /= 2;
+    } while (n != 0);
+    stack_display(stack);
+    stack_destroy(&stack);
+    return 0;
+}
+
+
+	stack.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int stack_init(struct stack_t **stack)
+{
+    if (!stack) return 1;
+    *stack = malloc(sizeof(struct stack_t));
+    if (!*stack) return 2;
+    (*stack)->head = NULL;
+    return 0;
+}
+int stack_push(struct stack_t *stack, int value)
+{
+    if (!stack) return 1;
+    struct node_t *node = malloc(sizeof(struct node_t));
+    if (!node) return 2;
+    node->data = value;
+    node->next = stack->head;
+    stack->head = node;
+    return 0;
+}
+void stack_display(const struct stack_t* stack)
+{
+    if (!stack) return;
+    struct node_t *tmp = stack->head;
+    while (tmp) {
+        printf("%d ", tmp->data);
+        tmp = tmp->next;
+    }
+}
+int stack_pop(struct stack_t* stack, int *err_code)
+{
+    if (!stack || !stack->head) {
+        if(err_code) *err_code = 1;
+        return 0;
+    }
+    if (err_code) *err_code = 0;
+    int value = stack->head->data;
+    struct node_t *tmp = stack->head;
+    stack->head = tmp->next;
+    free(tmp);
+    return value;
+}
+void stack_destroy(struct stack_t** stack)
+{
+    if (!stack) return;
+    int err = 0;
+    while (!err) {
+        stack_pop(*stack, &err);
+    }
+    free(*stack);
+    *stack = NULL;
+}
+int stack_empty(const struct stack_t* stack)
+{
+    if (!stack) return 2;
+    if (!stack->head) return 1;
+    return 0;
+}
+int stack_size(const struct stack_t* stack)
+{
+    if (!stack) return -1;
+    int size = 0;
+    struct node_t *tmp = stack->head;
+    while (tmp) {
+        size++;
+        tmp = tmp->next;
+    }
+    return size;
+}
+
+
+	stack.h
+
+#ifndef STACK
+#define STACK
+
+struct stack_t
+{
+    struct node_t *head;
+};
+
+struct node_t
+{
+    int data;
+    struct node_t* next;
+};
+int stack_init(struct stack_t **stack);
+int stack_push(struct stack_t *stack, int value);
+void stack_display(const struct stack_t* stack);
+int stack_pop(struct stack_t* stack, int *err_code);
+void stack_destroy(struct stack_t** stack);
+int stack_size(const struct stack_t* stack);
+int stack_empty(const struct stack_t* stack);
+
+#endif

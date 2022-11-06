@@ -1,0 +1,202 @@
+Makra i struktury
+
+
+functions.h
+
+
+#ifndef FUNCS
+#define FUNCS
+
+#include <stdint.h>
+#include <stdlib.h>
+
+#define DEFINE_ARRAY(TYPE)\
+struct array_##TYPE##_t\
+{\
+    int size;\
+    int capacity;\
+    TYPE *data;\
+};
+#define CREATE_ARRAY(TYPE)\
+struct array_##TYPE##_t *create_array_##TYPE(int size)\
+{\
+    if (size <= 0) return NULL;\
+    struct array_##TYPE##_t *array = malloc(sizeof(struct array_##TYPE##_t));\
+    if (!array) return NULL;\
+    array->data = malloc(sizeof(TYPE) * size);\
+    if (!array->data)\
+    {\
+        free(array);\
+        return NULL;\
+    }\
+    array->size = 0;\
+    array->capacity = size;\
+    return array;\
+}
+#define FREE_ARRAY(TYPE)\
+void free_array_##TYPE(struct array_##TYPE##_t *array)\
+{\
+    if (!array) return;\
+    if (array->data) free(array->data);\
+    free(array);\
+}
+#define SAVE_ARRAY(TYPE)\
+int save_array_##TYPE(const struct array_##TYPE##_t *array, const char *filename)\
+{\
+    if (!array || !filename || !array->data || array->size <= 0 || array->size > array->capacity) return 1;\
+    FILE *f = fopen(filename, "wb");\
+    if (!f) return 2;\
+    fwrite(&array->size, sizeof(int), 1, f);\
+    fwrite(array->data, sizeof(TYPE), array->size, f);\
+    fclose(f);\
+    return 0;\
+}
+#define LOAD_ARRAY(TYPE)\
+int load_array_##TYPE(struct array_##TYPE##_t **array, const char *filename)\
+{\
+    if (!array || !filename) return 1;\
+    FILE *f = fopen(filename, "rb");\
+    if (!f) return 2;\
+    int size = 0;\
+    fread(&size, sizeof(int), 1, f);\
+    if (size <= 0) {\
+        fclose(f);\
+        return 3;\
+    }\
+    *array = create_array_##TYPE(size);\
+    if (!*array) {\
+        fclose(f);\
+        return 4;\
+    }\
+    (*array)->size = fread((*array)->data, sizeof(TYPE), size, f);\
+    if ((*array)->size != (*array)->capacity) {\
+        free_array_##TYPE(*array);\
+        fclose(f);\
+        return 3;\
+    }\
+    fclose(f);\
+    return 0;\
+}
+
+#define SORT_ARRAY(TYPE)\
+int sort_array_##TYPE(struct array_##TYPE##_t *array)\
+{\
+    if(!array || !array->data || array->size <= 0 || array->size > array->capacity) return 1;\
+    for(int i = 0; i < array->size; ++i){\
+        for(int j = 1; j < array->size; ++j){\
+            if(*(array->data + j - 1) > *(array->data + j)){\
+                TYPE tmp = *(array->data + j - 1);\
+                *(array->data + j - 1) = *(array->data + j);\
+                *(array->data + j) = tmp;\
+            }\
+        }\
+    }\
+    return 0;\
+}
+
+#endif
+
+
+main.c
+#include <stdio.h>
+#include <stdlib.h>
+#include "functions.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+DEFINE_ARRAY(int)
+CREATE_ARRAY(int)
+LOAD_ARRAY(int)
+SAVE_ARRAY(int)
+SORT_ARRAY(int)
+FREE_ARRAY(int)
+DEFINE_ARRAY(double)
+CREATE_ARRAY(double)
+LOAD_ARRAY(double)
+SAVE_ARRAY(double)
+SORT_ARRAY(double)
+FREE_ARRAY(double)
+
+int main()
+{
+    char *filename = malloc(30);
+    if (!filename) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    printf("Enter filename: ");
+    scanf("%29[^\n]s", filename);
+    printf("Choose your type: ");
+    int type;
+    int err = scanf("%d", &type);
+    if (err != 1) {
+        printf("Incorrect input");
+        free(filename);
+        return 1;
+    }
+    if (type != 0 && type != 1) {
+        printf("Incorrect input data");
+        free(filename);
+        return 2;
+    }
+    if (type == 0) {
+        struct array_int_t *array;
+        err = load_array_int(&array, filename);
+        if (err == 2) {
+            printf("Couldn't open file");
+            free(filename);
+            return 4;
+        }
+        if (err == 3) {
+            printf("File corrupted");
+            free(filename);
+            return 6;
+        }
+        if (err == 4) {
+            printf("Failed to allocate memory");
+            free(filename);
+            return 8;
+        }
+        sort_array_int(array);
+        err = save_array_int(array, filename);
+        if (err == 2) {
+            printf("Couldn't create file");
+            free_array_int(array);
+            free(filename);
+            return 5;
+        }
+        free_array_int(array);
+    }
+    else {
+        struct array_double_t *array;
+        err = load_array_double(&array, filename);
+        if (err == 2) {
+            printf("Couldn't open file");
+            free(filename);
+            return 4;
+        }
+        if (err == 3) {
+            printf("File corrupted");
+            free(filename);
+            return 6;
+        }
+        if (err == 4) {
+            printf("Failed to allocate memory");
+            free(filename);
+            return 8;
+        }
+        sort_array_double(array);
+        err = save_array_double(array, filename);
+        if (err == 2) {
+            printf("Couldn't create file");
+            free_array_double(array);
+            free(filename);
+            return 5;
+        }
+        free_array_double(array);
+    }
+    printf("File saved");
+    free(filename);
+    return 0;
+}
+

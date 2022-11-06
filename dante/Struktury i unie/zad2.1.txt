@@ -1,0 +1,181 @@
+Punkt, Save, Mecz
+Napisz program do zapisywania oraz odczytywania danych ze struktury do oraz z pliku, w postaci tekstowej oraz binarnej.
+
+W tym celu wykorzystaj strukturę point_t oraz funkcje show i set z zadania 25.3 W punkt.
+
+Ponadto przygotuj dodatkowe funkcje do zapisu oraz do odczytu danych struktury point_t, obsługujących format binarny oraz tekstowy przechowywania danych. Funkcje te mają mieć następujące prototypy:
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <ctype.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+struct point_t
+{
+    int x;
+    int y;
+};
+
+void show(const struct point_t* p){
+    if (p==NULL){
+        return;
+    }
+    printf("x = %d; y = %d\n",p->x,p->y);
+
+}
+struct point_t* set(struct point_t* p, int x, int y){
+    if(p==NULL){
+        return NULL;
+    }
+    p->x=x;
+    p->y=y;
+
+return p;
+}
+int save_point_b(const char *filename, const struct point_t *p) {
+    if (filename == NULL || p == NULL) {
+        return 1;
+    }
+    FILE *f = fopen(filename, "w");
+    if (f == NULL)  return 2;
+    fwrite(p, sizeof(struct point_t), 1, f);
+    fclose(f);
+    return 0;
+}
+
+
+int load_point_b(const char *filename, struct point_t *p) {
+    if (filename == NULL || p == NULL) {
+        return 1;
+    }
+    FILE *f = fopen(filename, "r");
+    if (f == NULL)  return 2;
+    if (fread(p, sizeof(struct point_t), 1, f) < 1) {
+        fclose(f);
+        return 3;
+    }
+    fclose(f);
+    return 0;
+}
+
+
+int save_point_t(const char *filename, const struct point_t *p) {
+    if (filename == NULL || p == NULL) {
+        return 1;
+    }
+    FILE *f = fopen(filename, "w");
+    if (f == NULL)  return 2;
+    fprintf(f, "%d %d", p->x, p->y);
+    fclose(f);
+    return 0;
+}
+
+int load_point_t(const char *filename, struct point_t *p) {
+    if (filename == NULL || p == NULL) {
+        return 1;
+    }
+    FILE *f = fopen(filename, "r");
+    if (f == NULL)  return 2;
+    if (fscanf(f, "%d %d", &p->x, &p->y) != 2) {
+        fclose(f);
+        return 3;
+    }
+    fclose(f);
+    return 0;
+}
+
+
+void get_line(char *str, int size) {
+    char c;
+    for (int i = 0; i < size; ++i) {
+        c = getchar();
+        if (c == '\n') {
+            *(str + i) = '\0';
+            return;
+        }
+        else if (i + 1 == size) {
+            i--;
+        }
+        else {
+            *(str + i) = c;
+        }
+    }
+}
+
+
+int main() {
+    srand(time(NULL));
+    struct point_t point;
+    point.x = (int)rand() % 10;
+    point.y = (int)rand() % 10;
+    printf("x = %d; y = %d\n", point.x, point.y);
+    printf("Podaj sciezke do pliki: ");
+    char filename[31];
+    get_line(filename, 31);
+    unsigned int filename_len = strlen(filename);
+    int is_binary = 0;
+    int is_txt = 0;
+    if (filename_len >= 4 && strcmp(filename + filename_len - 4, ".bin") == 0)
+        is_binary = 1;
+    if (filename_len >= 4 && strcmp(filename + filename_len - 4, ".txt") == 0)
+        is_txt = 1;
+    if (is_txt == 0 && is_binary == 0) {
+        printf("Unsupported file format");
+        return 7;
+    }
+    if (is_binary) {
+        if (save_point_b(filename, &point) == 2) {
+            printf("Couldn't create file");
+            return 5;
+        }
+        else printf("File saved\n");
+    }
+    if (is_txt) {
+        if (save_point_t(filename, &point) == 2) {
+            printf("Couldn't create file");
+            return 5;
+        }
+        else printf("File saved\n");
+    }
+    printf("Czy chcesz odczytac dane? (Y/N)\n");
+    char c = getchar();
+    if (tolower(c) == 'n') {
+        return 0;
+    }
+    else if (tolower(c) == 'y') {
+        int check;
+        if (is_binary) {
+            check = load_point_b(filename, &point);
+            if (check == 2) {
+                printf("Couldn't open file");
+                return 4;
+            }
+            else if (check == 3) {
+                printf("File corrupted");
+                return 6;
+            }
+        }
+        else {
+            check = load_point_t(filename, &point);
+            if (check == 2) {
+                printf("Couldn't open file");
+                return 4;
+            }
+            else if (check == 3) {
+                printf("File corrupted");
+                return 6;
+            }
+        }
+        printf("x = %d; y = %d\n", point.x, point.y);
+    }
+    else{
+        printf("Incorrect input");
+        return 1;
+    }
+    return 0;
+}

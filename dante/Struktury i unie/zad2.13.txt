@@ -1,0 +1,103 @@
+Ukryta wiadomość II
+Przygotuj program do ukrywania wiadomości w nieużywanych częściach struktur języka C, przy założeniu, że struktury nie są upakowane.
+
+W tym celu przygotuj strukturę do przechowywania trzech wartości typu char, double i int w podanej kolejności. Struktura powinna wyglądać następująco:
+
+
+
+#include <stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+struct message_t
+{
+    char a;
+    double b;
+    int c;
+};
+
+int load_data(struct message_t *cp, int size, const char *filename){
+    if(cp==NULL||size<1||filename==NULL){
+        return -1;
+    }
+    FILE *file;
+    int size_s, size_e;
+    file = fopen(filename, "rb");
+    if(file==NULL){
+        return -2;
+    }
+    if(!fread(&size_s, sizeof(size_s), 1, file)){
+        fclose(file);
+        return -3;
+    }
+    if(size_s % sizeof(*cp)){
+        fclose(file);
+        return -3;
+    }
+    size_e=fread(cp,sizeof(*cp), size, file);
+    fclose(file);
+    return size_e;
+}
+int decode_message(const struct message_t *cp, int size, char *msg, int text_size){
+    if(cp==NULL||size<1||text_size<1||msg==NULL){
+        return 1;
+    }
+    if(text_size==1){
+        *msg='\0';
+        return 0;
+    }
+
+    int p=0;
+    int i,j;
+    char *ws=msg;
+    for(i=0; i<size; i++){
+        for(j=1; j<=7; j++){
+            *ws=*((char*)cp+i*24+j);
+            p++;
+            ws++;
+            if(p==text_size-1){
+                break;
+            }
+        }
+        if(p==text_size-1){
+            break;
+        }
+        for(int j=20; j<=23; j++){
+            *ws=*((char*)cp+i*24+j);
+            p++;
+            ws++;
+            if(p==text_size-1){
+                break;
+            }
+        }
+        if(p==text_size-1){
+            break;
+        }
+    }
+    *ws='\0';
+    return 0;
+}
+
+int main() {
+    char file[31];
+    char tab[1101];
+    struct message_t cp[100];
+    int temp;
+
+    printf("Podaj nazwe pliku:\n");
+    scanf("%30[^\n]", file);
+    temp = load_data(cp, 100, file);
+    if(temp==-2){
+        printf("Couldn't open file");
+        return 4;
+    }
+    else if(temp==-3){
+        printf("File corrupted");
+        return 6;
+    }
+    else{
+        decode_message(cp, temp, tab, 1101);
+        printf("%s", tab);
+    }
+    return 0;
+}

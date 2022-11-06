@@ -1,0 +1,146 @@
+Bezpieczna tablica
+
+	array.c
+
+#include "array.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int array_create(struct array_t *a, int N){
+    if(a==NULL)
+        return 1;
+    if(N<=0)
+        return 1;
+    int *parray =(int*)malloc(sizeof(int)*N);
+    if(parray==NULL)
+        return 2;
+    a->capacity=N;
+    a->size=0;
+    a->ptr=parray;
+    return 0;
+}
+
+int array_push_back(struct array_t *a, int value){
+    if(a == NULL)
+        return 1;
+    if(a->size <0)
+        return 1;
+    if(a->ptr==NULL)
+        return 1;
+    if(a->capacity<1)
+        return 1;
+    if(a->size>a->capacity)
+       return 1;
+    if(a->size > a->capacity)
+        return 2;
+    if(a->size == a->capacity)
+        return 2;
+
+    *(a->ptr + a->size) = value;
+    a->size=a->size+1;
+    return 0;
+}
+void array_display(const struct array_t *a){
+    if(a!=NULL){
+        if(a->ptr!=NULL){
+            if( a->size>=1){
+                if(a->size<=a->capacity) {
+                    int i = 0;
+                    while (i < (a->size)) {
+                        printf("%d ", *(a->ptr + i));
+                        i++;
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+void array_destroy(struct array_t *a){
+    int temp=0;
+    if(a==NULL)
+        temp=1;
+    if(temp==0)
+    free(a->ptr);
+}
+
+array.h
+#ifndef ARRAY_H_INCLUDED
+#define ARRAY_H_INCLUDED
+
+struct array_t{
+    int *ptr;
+    int size;
+    int capacity;
+};
+int array_create(struct array_t *a, int N);
+int array_push_back(struct array_t *a, int value);
+void array_display(const struct array_t *a);
+void array_destroy(struct array_t *a);
+
+#endif
+
+
+main.c
+#include <stdio.h>
+#include "array.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+
+int main() {
+    struct array_t tab;
+    int N, res, res2,res3;
+    int isfull=0;
+    printf("Podaj rozmiar tablicy:");
+    res = scanf("%d", &N);
+    if (res == 0) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (N < 1) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    int temp;
+    temp = array_create(&tab,N);
+    if(temp>0){
+        printf("Failed to allocate memory");
+        return 8;
+    }
+
+    printf("Podaj liczby:");
+    for (;;) {
+        res2 = scanf("%d", &temp);
+        if (res2 != 1) {
+            printf("Incorrect input");
+            array_destroy(&tab);
+            return 1;
+        }
+        if(temp==0){
+            break;
+        }
+        res3=array_push_back(&tab,temp);
+        if(res3==2)
+            isfull=2;
+    }
+    if(isfull==2){
+        printf("Buffer is full\n");
+    }
+    if(tab.size==0){
+        printf("Buffer is empty");
+        array_destroy(&tab);
+        return 0;
+    }
+    else{
+        array_display(&tab);
+    }
+    array_destroy(&tab);
+    return 0;
+}

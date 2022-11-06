@@ -1,0 +1,242 @@
+Usuwanie elementów z tablicy
+
+array.c
+
+#include "array.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+//#include "tested_declarations.h"
+//#include "rdebug.h"
+
+
+
+int array_create(struct array_t *a, int N){
+    if(a==NULL)
+        return 1;
+    if(N<=0)
+        return 1;
+    int *parray =(int*)malloc(sizeof(int)*N);
+    if(parray==NULL)
+        return 2;
+    a->capacity=N;
+    a->size=0;
+    a->ptr=parray;
+    return 0;
+}
+
+int array_push_back(struct array_t *a, int value){
+    if(a == NULL)
+        return 1;
+    if(a->size <0)
+        return 1;
+    if(a->ptr==NULL)
+        return 1;
+    if(a->capacity<1)
+        return 1;
+    if(a->size>a->capacity)
+       return 1;
+    if(a->size > a->capacity)
+        return 2;
+    if(a->size == a->capacity)
+        return 2;
+
+    *(a->ptr + a->size) = value;
+    a->size=a->size+1;
+    return 0;
+}
+void array_display(const struct array_t *a){
+    if(a!=NULL){
+        if(a->ptr!=NULL){
+            if( a->size>=1){
+                if(a->size<=a->capacity) {
+                    int i = 0;
+                    while (i < (a->size)) {
+                        printf("%d ", *(a->ptr + i));
+                        i++;
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+void array_destroy(struct array_t *a){
+    int temp=0;
+    if(a==NULL)
+        temp=1;
+    if(temp==0)
+    free(a->ptr);
+}
+
+int array_create_struct(struct array_t **a, int N){
+    if(N<=0 || a==NULL){
+        return 1;
+    }
+    *a =(struct array_t*)malloc(sizeof(struct array_t));
+    if(*a==NULL)
+        return 2;
+    int tab;
+    tab = array_create(*a,N);
+    if(tab==2) {
+        free(*a);
+        return 2;
+    }
+    return 0;
+}
+void array_destroy_struct(struct array_t **a){
+    int temp=0;
+    if(a==NULL)
+        temp=1;
+    if(temp==0) {
+        array_destroy(*a);
+        free(*a);
+    }
+}
+
+int item_remover(struct array_t *a, int value) {
+    for (int i = 0; i < a->size; i++) {
+        if (*(a->ptr + i) == value) {
+            for (int j = i + 1; j < a->size; j++) {
+                *(a->ptr + j - 1) = *(a->ptr + j);
+            }
+            a->size -= 1;
+            return 1 + item_remover(a, value);
+        }
+    }
+    return 0;
+}
+
+int array_remove_item(struct array_t *a, int value) {
+    if(a == NULL || a->size<0 || a->capacity<=0 || a->size>a->capacity)
+        return -1;
+    int removed = item_remover(a, value);
+    return removed;
+}
+
+array.h
+
+
+#ifndef ARRAY_H_INCLUDED
+#define ARRAY_H_INCLUDED
+
+struct array_t{
+    int *ptr;
+    int size;
+    int capacity;
+};
+int array_create(struct array_t *a, int N);
+int array_push_back(struct array_t *a, int value);
+void array_display(const struct array_t *a);
+void array_destroy(struct array_t *a);
+int array_create_struct(struct array_t **a, int N);
+void array_destroy_struct(struct array_t **a);
+int array_remove_item(struct array_t *a, int value);
+#endif
+
+
+main.c
+#include <stdio.h>
+#include "array.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+//#include "tested_declarations.h"
+//#include "rdebug.h"
+
+int main() {
+    struct array_t *tab;
+    int N, res, what, res1, res2, res3,res4,res5;
+    int isfull = 0;
+    printf("Podaj rozmiar tablicy:");
+    res = scanf("%d", &N);
+    if (res == 0) {
+        printf("incorrect input");
+        return 1;
+    }
+    if (N < 1) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    int temp;
+    temp = array_create_struct(&tab, N);
+    if (temp > 0) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+
+
+    while(1) {
+        printf("Co chcesz zrobic: ");
+        res1 = scanf("%d", &what);
+        if (res1 != 1) {
+            printf("incorrect input");
+            array_destroy_struct(&tab);
+            return 1;
+        }
+        if((what!=0) && (what!=1) && (what!=2)){
+            printf("Incorrect input data\n");
+            continue;
+        }
+
+        if (what == 1) {
+            printf("Podaj kolejne liczby, które mają zostać dodane do tablicy:");
+            for (;;) {
+                res2 = scanf("%d", &temp);
+                if (res2 != 1) {
+                    printf("incorrect input");
+                    array_destroy_struct(&tab);
+                    return 1;
+                }
+                if (temp == 0) {
+                    break;
+                }
+                res3 = array_push_back(tab, temp);
+                if (res3 == 2)
+                    isfull = 2;
+                if (isfull == 2) {
+                    printf("Buffer is full\n");
+                    break;
+                }
+            }
+            if (tab->size == 0 && isfull != 2) {
+                printf("Buffer is empty");
+            }
+            else {
+                array_display(tab);
+            }
+        }
+        if (what == 2) {
+            printf("Podaj kolejne liczby, które mają zostać usuniete z tablicy:");
+            for (;;) {
+                res4 = scanf("%d", &temp);
+                if (res4!= 1) {
+                    printf("incorrect input");
+                    array_destroy_struct(&tab);
+                    return 1;
+                }
+                if (temp == 0) {
+                    break;
+                }
+                res5 = array_remove_item(tab, temp);
+                if (res5 == -1){
+                    break;
+                }
+            }
+            if (tab->size == 0) {
+                printf("Buffer is empty");
+            }
+            else {
+                array_display(tab);
+            }
+        }
+        if (what == 0) {
+            break;
+        }
+        printf("\n");
+    }
+    array_destroy_struct(&tab);
+    return 0;
+}

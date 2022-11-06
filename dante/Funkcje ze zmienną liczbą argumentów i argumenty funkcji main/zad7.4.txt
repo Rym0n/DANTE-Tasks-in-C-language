@@ -1,0 +1,90 @@
+Dynamiczne łączenie tekstów
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+char* concatenate(int N, ...);
+int main()
+{
+    char **buf;
+    buf = malloc(4 * sizeof(char*));
+    if (!buf) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    for (int i = 0; i < 4; ++i) {
+        *(buf + i) = calloc(1001, sizeof(char));
+        if (!*(buf + i)) {
+            printf("Failed to allocate memory");
+            for (int j = 0; j < i; ++j) free(*(buf + j));
+            free(buf);
+            return 8;
+        }
+    }
+    int size;
+    printf("Podaj liczbe tekstow do wprowadzenia: ");
+    int err = scanf("%d", &size);
+    if (err != 1) {
+        printf("Incorrect input");
+        for (int i = 0; i < 4; ++i) free(*(buf + i));
+        free(buf);
+        return 1;
+    }
+    if (size < 2 || size > 4) {
+        printf("Incorrect input data");
+        for (int i = 0; i < 4; ++i) free(*(buf + i));
+        free(buf);
+        return 2;
+    }
+    getchar();
+    printf("Podaj teksty:\n");
+    for(int i = 0; i < size; ++i) {
+        scanf("%1000[^\n]s", *(buf+i));
+        char c;
+        do {c=getchar();} while(c!='\n');
+    }
+    char *out;
+    if (size == 2) out = concatenate(2, *buf, *(buf+1));
+    if (size == 3) out = concatenate(3, *buf, *(buf+1), *(buf+2));
+    if (size == 4) out = concatenate(4, *buf, *(buf+1), *(buf+2), *(buf+3));
+    if (!out) {
+    printf("Failed to allocate memory");
+    for (int i = 0; i < 4; ++i) free(*(buf + i));
+    free(buf);
+    return 8;
+    }
+    else printf("%s", out);
+    for (int i = 0; i < 4; ++i) free(*(buf + i));
+    free(buf);
+    free(out);
+    return 0;
+}
+char* concatenate(int N, ...)
+{
+    if(N <= 0) return NULL;
+    va_list v1, v2;
+    va_start(v1, N);
+    va_copy(v2, v1);
+    int size2 = strlen(va_arg(v1, char*)) + 1;
+    char *out = malloc(size2);
+    if (!out) return NULL;
+    strcpy(out, va_arg(v2, char*));
+    for (int i = 1; i < N; ++i) {
+        size2 += strlen(va_arg(v1, char*)) + 1;
+        char *tmp = realloc(out, size2);
+        if (!tmp) {
+            free(out);
+            return NULL;
+        }
+        out = tmp;
+        strcat(out, " ");
+        strcat(out, va_arg(v2, char*));
+    }
+    va_end(v1);
+    va_end(v2);
+    return out;
+}

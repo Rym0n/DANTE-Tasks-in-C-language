@@ -1,0 +1,42 @@
+Porównanie bez znaku równości
+
+Wykorzystując operatory bitowe napisz funkcje sprawdzające:
+
+czy dwie liczby całkowite są równe oraz
+czy liczba jest ujemna. Funkcje powinny mieć następujący prototypy:
+
+
+#include <stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int is_equal(int a, int b);
+int is_negative(int value);
+int main()
+{
+    printf("Podaj dwie liczby: ");
+    int x, y;
+    int err = scanf("%d", &x);
+    int err2 = scanf("%d", &y);
+    if (!err || !err2) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (is_equal(x, y)) printf("rowne\n");
+    else printf("nierowne\n");
+    if (is_negative(x)) printf("ujemna ");
+    else printf("nieujemna ");
+    if (is_negative(y)) printf("ujemna");
+    else printf("nieujemna");
+    return 0;
+}
+int is_equal(int a, int b)
+{
+    if (a ^ b) return 0;
+    return 1;
+}
+int is_negative(int value)
+{
+    if (value & 1<<31) return 1;
+    return 0;
+}

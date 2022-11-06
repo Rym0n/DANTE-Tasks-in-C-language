@@ -1,0 +1,147 @@
+1. Stos - podejście pierwsze
+
+
+main.c
+#include <stdio.h>
+#include <stdlib.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    struct stack_t *stack;
+    int err = stack_init(&stack, 10);
+    if (err == 2) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    while (1) {
+        printf("Co chcesz zrobic? ");
+        int op;
+        err = scanf("%d", &op);
+        if (err != 1) {
+            printf("Incorrect input");
+            stack_free(stack);
+            return 1;
+        }
+        if (op == 0) break;
+        else if (op == 1) {
+            printf("Podaj liczbe ");
+            int x;
+            err = scanf("%d", &x);
+            if (err != 1) {
+                printf("Incorrect input");
+                stack_free(stack);
+                return 1;
+            }
+            err = stack_push(stack, x);
+            if (err == 2) {
+                printf("Failed to allocate memory");
+                stack_free(stack);
+                return 8;
+            }
+        }
+        else if (op == 2) {
+            int x;
+            x = stack_pop(stack, &err);
+            if (err == 2) printf("Stack is empty\n");
+            else printf("%d\n", x);
+        }
+        else if (op == 3) {
+            if (stack->head == 0) printf("Stack is empty\n");
+            else {
+                stack_display(stack);
+                printf("\n");
+            }
+        }
+        else printf("Incorrect input data\n");
+    }
+    stack_free(stack);
+    return 0;
+}
+
+
+stack.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "stack.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int stack_init(struct stack_t **stack, int N)
+{
+    if (!stack || N <= 0) return 1;
+    *stack = malloc(sizeof(struct stack_t));
+    if (!*stack) return 2;
+    (*stack)->data = malloc(N * sizeof(int));
+    if (!(*stack)->data) {
+        free(*stack);
+    *stack = NULL;
+        return 2;
+    }
+    (*stack)->capacity = N;
+    (*stack)->head = 0;
+    return 0;
+}
+int stack_push(struct stack_t *stack, int value)
+{
+    if (!stack || !stack->data || stack->head < 0 || stack->capacity <= 0 || stack->head > stack->capacity) return 1;
+    if (stack->head == stack->capacity) {
+        int *tmp = realloc(stack->data, (sizeof(int) * (stack->capacity * 2)));
+        if (!tmp) return 2;
+        stack->data = tmp;
+        stack->capacity = 2 * stack->capacity;
+    }
+    *(stack->data + stack->head) = value;
+    stack->head++;
+    return 0;
+}
+int stack_pop(struct stack_t *stack, int *err_code)
+{
+    if (!stack || !stack->data || stack->head < 0 || stack->capacity <= 0 || stack->head > stack->capacity) {
+        if(err_code) *err_code = 1;
+        return 0;
+    }
+    if (stack->head == 0) {
+        if(err_code) *err_code = 2;
+        return 0;
+    }
+    if(err_code) *err_code = 0;
+    stack->head--;
+    return *(stack->data + stack->head);
+}
+void stack_display(const struct stack_t *stack)
+{
+    if (!stack || !stack->data || stack->head < 0 || stack->capacity <= 0 || stack->head > stack->capacity) return;
+    for (int i = stack->head - 1; i >= 0; --i) {
+        printf("%d ", *(stack->data + i));
+    }
+}
+void stack_free(struct stack_t *stack)
+{
+    if (!stack || !stack->data || stack->head < 0 || stack->capacity <= 0 || stack->head > stack->capacity) return;
+    free(stack->data);
+    free(stack);
+}
+
+
+stack.h
+
+#ifndef STACK
+#define STACK
+
+struct stack_t
+{
+    int head;
+    int capacity;
+    int *data;
+};
+int stack_init(struct stack_t **stack, int N);
+int stack_push(struct stack_t *stack, int value);
+int stack_pop(struct stack_t *stack, int *err_code);
+void stack_display(const struct stack_t *stack);
+void stack_free(struct stack_t *stack);
+
+#endif

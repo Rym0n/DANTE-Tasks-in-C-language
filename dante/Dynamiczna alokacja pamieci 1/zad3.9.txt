@@ -1,0 +1,405 @@
+Operacje matematyczne na wektorach
+
+
+	main.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "array.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main() {
+    printf("Podaj rozmiar tablicy");
+    int size;
+    if (scanf("%d", &size) != 1) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (size <= 0 || size > 100) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    struct array_t *array1, *array2;
+    if (array_create_struct_float(&array1, size) != 0) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    int i;
+    printf("Podaj liczby");
+    for (i = 0; i < size; i++) {
+        float input;
+        if (scanf("%f", &input) != 1) {
+            printf("Incorrect input");
+            array_destroy_struct_float(&array1);
+            return 1;
+        }
+        array_push_back_float(array1, input);
+    }
+    printf("Podaj rozmiar tablicy");
+    if (scanf("%d", &size) != 1) {
+        printf("Incorrect input");
+        array_destroy_struct_float(&array1);
+        return 1;
+    }
+    if (size <= 0 || size > 100) {
+        array_destroy_struct_float(&array1);
+        printf("Incorrect input data");
+        return 2;
+    }
+    if (array_create_struct_float(&array2, size) != 0) {
+        array_destroy_struct_float(&array1);
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    printf("Podaj liczby");
+    for (i = 0; i < size; i++) {
+        float input;
+        if (scanf("%f", &input) != 1) {
+            printf("Incorrect input");
+            array_destroy_struct_float(&array1);
+            array_destroy_struct_float(&array2);
+            return 1;
+        }
+        array_push_back_float(array2, input);
+    }
+
+    struct array_t *arrayResult;
+    int ret = add_vectors(array1, array2, &arrayResult);
+    if (ret == 1) {
+        printf("Operation not permitted\n");
+    } else if (ret == 2) {
+        printf("Failed to allocate memory");
+        array_destroy_struct_float(&array1);
+        array_destroy_struct_float(&array2);
+        return 8;
+    } else {
+        array_display_float(arrayResult);
+        printf("\n");
+        array_destroy_struct_float(&arrayResult);
+    }
+
+    ret = subtract_vectors(array1, array2, &arrayResult);
+    if (ret == 1) {
+        printf("Operation not permitted\n");
+    } else if (ret == 2) {
+        printf("Failed to allocate memory");
+        array_destroy_struct_float(&array1);
+        array_destroy_struct_float(&array2);
+        return 8;
+    } else {
+        array_display_float(arrayResult);
+        printf("\n");
+
+        array_destroy_struct_float(&arrayResult);
+    }
+
+    float result = dot_product(array1, array2);
+    if (result == -1) {
+        printf("Operation not permitted\n");
+    } else {
+        printf("%.2f\n", result);
+    }
+
+    result = angle_between_vectors(array1, array2);
+    if (result == -1) {
+        printf("Operation not permitted\n");
+    } else {
+        printf("%.2f\n", result);
+    }
+
+    result = length(array1);
+    if (result == -1) {
+        printf("Operation not permitted\n");
+    } else {
+        printf("%.2f\n", result);
+    }
+
+    result = length(array2);
+    if (result == -1) {
+        printf("Operation not permitted\n");
+    } else {
+        printf("%.2f\n", result);
+    }
+
+    ret = normalize_vector(array1, &arrayResult);
+    if (ret == 1) {
+        printf("Operation not permitted\n");
+    } else if (ret == 2) {
+        printf("Failed to allocate memory");
+        array_destroy_struct_float(&array1);
+        array_destroy_struct_float(&array2);
+        return 8;
+    } else if (ret == 3) {
+        printf("Operation not permitted\n");
+    } else {
+        array_display_float(arrayResult);
+        printf("\n");
+
+        array_destroy_struct_float(&arrayResult);
+    }
+
+    ret = normalize_vector(array2, &arrayResult);
+    if (ret == 1) {
+        printf("Operation not permitted\n");
+    } else if (ret == 2) {
+        printf("Failed to allocate memory");
+        array_destroy_struct_float(&array1);
+        array_destroy_struct_float(&array2);
+        return 8;
+    } else if (ret == 3) {
+        printf("Operation not permitted\n");
+    } else {
+        array_display_float(arrayResult);
+        printf("\n");
+
+        array_destroy_struct_float(&arrayResult);
+    }
+
+
+    array_destroy_struct_float(&array1);
+    array_destroy_struct_float(&array2);
+    return 0;
+}
+
+
+array.h
+#ifndef ARRAY_H_INCLUDED
+#define ARRAY_H_INCLUDED
+
+struct array_t{
+    float *ptr;
+    int size;
+    int capacity;
+};
+int array_create_float(struct array_t *a, int N);
+int array_push_back_float(struct array_t *a, float value);
+void array_display_float(const struct array_t *a);
+void array_destroy_float(struct array_t *a);
+void array_destroy_struct_float(struct array_t **a);
+int array_create_struct_float(struct array_t **a, int N);
+
+int add_vectors(const struct array_t *a, const struct array_t *b, struct array_t **c);
+int subtract_vectors(const struct array_t *a, const struct array_t *b, struct array_t **c);
+float dot_product(const struct array_t *a, const struct array_t *b);
+float angle_between_vectors(const struct array_t *a, const struct array_t *b);
+float length(const struct array_t *a);
+int normalize_vector(const struct array_t *a, struct array_t **b);
+#endif
+
+array.c
+#include "array.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+#define M_PI 3.14159265358979323846
+
+int is_legitimate_array(const struct array_t *a) {
+    if (a == NULL)
+        return 1;
+    if (a->size < 0)
+        return 1;
+    if (a->ptr == NULL)
+        return 1;
+    if (a->capacity < 1)
+        return 1;
+    if (a->size > a->capacity)
+        return 1;
+    return 0;
+}
+
+int array_create_float(struct array_t *a, int N) {
+    if (a == NULL)
+        return 1;
+    if (N <= 0)
+        return 1;
+    float *parray = malloc(sizeof(float) * N);
+    if (parray == NULL)
+        return 2;
+    a->capacity = N;
+    a->size = 0;
+    a->ptr = parray;
+    return 0;
+}
+
+int array_push_back_float(struct array_t *a, float value) {
+    if (a == NULL)
+        return 1;
+    if (a->size < 0)
+        return 1;
+    if (a->ptr == NULL)
+        return 1;
+    if (a->capacity < 1)
+        return 1;
+    if (a->size > a->capacity)
+        return 1;
+
+    if (a->size == a->capacity)
+        return 2;
+
+    *(a->ptr + a->size) = value;
+    a->size = a->size + 1;
+    return 0;
+}
+
+void array_display_float(const struct array_t *a) {
+    if (a != NULL) {
+        if (a->ptr != NULL) {
+            if (a->size >= 1) {
+                if (a->size <= a->capacity) {
+                    int i = 0;
+                    while (i < (a->size)) {
+                        printf("%.2f ", *(a->ptr + i));
+                        i++;
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+void array_destroy_float(struct array_t *a) {
+    int temp = 0;
+    if (a == NULL)
+        temp = 1;
+    if (temp == 0)
+        free(a->ptr);
+}
+
+void array_destroy_struct_float(struct array_t **a) {
+    if (a == NULL) {
+        return;
+    }
+    array_destroy_float(*a);
+    free(*a);
+}
+
+int array_create_struct_float(struct array_t **a, int N) {
+    if (a == NULL)
+        return 1;
+    if (N <= 0)
+        return 1;
+    *a = malloc(sizeof(struct array_t));
+    if (*a == NULL) {
+        return 2;
+    }
+    int ret = array_create_float(*a, N);
+    if (ret != 0) {
+        free(*a);
+        return ret;
+    }
+    return 0;
+}
+
+int add_vectors(const struct array_t *a, const struct array_t *b, struct array_t **c) {
+    if (a == NULL || b == NULL || c == NULL || is_legitimate_array(a) || is_legitimate_array(b) || a->size == 0) {
+        return 1;
+    }
+    if (a->size != b->size) {
+        return 1;
+    }
+    if (array_create_struct_float(c, a->size) != 0) {
+        return 2;
+    }
+    int i;
+    for (i = 0; i < a->size; i++) {
+        if (array_push_back_float((*c), *(a->ptr + i) + *(b->ptr + i)) != 0) {
+            array_destroy_struct_float(c);
+            return 2;
+        }
+    }
+    return 0;
+}
+
+int subtract_vectors(const struct array_t *a, const struct array_t *b, struct array_t **c) {
+    if (a == NULL || b == NULL || c == NULL || is_legitimate_array(a) || is_legitimate_array(b) || a->size == 0) {
+        return 1;
+    }
+    if (a->size != b->size) {
+        return 1;
+    }
+    if (array_create_struct_float(c, a->size) != 0) {
+        return 2;
+    }
+    int i;
+    for (i = 0; i < a->size; i++) {
+        if (array_push_back_float((*c), *(a->ptr + i) - *(b->ptr + i)) != 0) {
+            array_destroy_struct_float(c);
+            return 2;
+        }
+    }
+    return 0;
+}
+
+float dot_product(const struct array_t *a, const struct array_t *b) {
+    if (is_legitimate_array(a) || is_legitimate_array(b)) {
+        return -1;
+    }
+    if (a->size != b->size) {
+        return -1;
+    }
+    int i;
+    float il_skal = 0.0f;
+    for (i = 0; i < a->size; i++) {
+        il_skal += *(a->ptr + i) * *(b->ptr + i);
+    }
+    return il_skal;
+}
+
+float length(const struct array_t *a) {
+    if (a == NULL || is_legitimate_array(a)) {
+        return -1;
+    }
+    int i;
+    float nums = 0.0f;
+    for (i = 0; i < a->size; i++) {
+        nums += *(a->ptr + i) * *(a->ptr + i);
+    }
+    return sqrtf(nums);
+}
+
+float angle_between_vectors(const struct array_t *a, const struct array_t *b) {
+    if (is_legitimate_array(a) || is_legitimate_array(b) || a->size == 0) {
+        return -1;
+    }
+    if (a->size != b->size) {
+        return -1;
+    }
+    float il_skal = dot_product(a, b);
+    float lengthA = length(a);
+    float lengthB = length(b);
+    float multipliedLenth = lengthA * lengthB;
+    if (multipliedLenth < 0.00001 && multipliedLenth > -0.00001) {
+        return -1;
+    }
+    return (acosf(il_skal / multipliedLenth) / (2 * M_PI)) * 360;
+}
+
+int normalize_vector(const struct array_t *a, struct array_t **b) {
+    if (is_legitimate_array(a) || b == NULL) {
+        return 1;
+    }
+    if (a->size == 0) {
+        return 3;
+    }
+    float len = length(a);
+    if (len == 0) {
+        return 3;
+    }
+    int i;
+    if (array_create_struct_float(b, a->size) != 0) {
+        return 2;
+    }
+    for (i = 0; i < a->size; i++) {
+        if (array_push_back_float(*b, *(a->ptr + i) / len) != 0) {
+            array_destroy_struct_float(b);
+            return 2;
+        }
+    }
+    return 0;
+}

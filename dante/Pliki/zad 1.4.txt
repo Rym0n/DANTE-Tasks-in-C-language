@@ -1,0 +1,48 @@
+nedej ein ot ,ikilp awd oC
+
+#include<stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main(){
+    FILE *first;
+    FILE *sec;
+    char nazwa_zmiennej[31];
+
+    long lay;
+    char ch;
+    printf("Podaj sciezke do pliku wejsciowego: ");
+    scanf("%30[^\n]s", nazwa_zmiennej);
+
+    while(getchar()!='\n');
+
+    if((first=fopen(nazwa_zmiennej, "r"))==NULL){
+        printf("Couldn't open file");
+        return 4;
+    }
+
+    *nazwa_zmiennej=0;
+
+    printf("Podaj sciezke do pliku wyjsciowego: ");
+
+    scanf("%30[^\n]s", nazwa_zmiennej);
+
+    if((sec=fopen(nazwa_zmiennej, "w"))==NULL){
+        printf("Couldn't create file");
+        fclose(first);
+        return 5;
+    }
+    fseek(first, 0L, SEEK_END);
+    lay = ftell(first);
+    lay = lay - 1;
+    while(lay >= 0L){
+        fseek(first, lay, SEEK_SET);
+        ch = fgetc(first);
+        fputc(ch, sec);
+        lay --;
+    }
+    fclose(first);
+    fclose(sec);
+    printf("File copied");
+    return 0;
+}

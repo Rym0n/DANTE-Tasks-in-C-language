@@ -1,0 +1,63 @@
+
+Wczytaj, dodaj, uśrednij i wyświetl
+
+Napisz program, który pobierze od użytkownika nazwę pliku, a następnie odczyta liczby całkowite w nim zapisane i wyznaczy odpowiednio sumę oraz średnią tych liczb,
+
+#include <stdio.h>
+#include <ctype.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main(){
+    FILE *fp;
+    char nazwa_zmiennej[31];
+    int sum=0;
+    int numb;
+    int count;
+    int temp=0;
+    int res;
+    float sred;
+    int i;
+    printf("Podaj sciezke do pliku:");
+    scanf("%30s",nazwa_zmiennej);
+    if((fp=fopen(nazwa_zmiennej,"r"))==NULL){
+        printf(" Couldn't open file");
+        return 4;
+    }
+    res=fscanf(fp,"%d",&count);
+    if(res==EOF){
+        printf("File corrupted");
+        fclose(fp);
+        return 6;
+    }
+    if(count<=0){
+        printf("File corrupted");
+        fclose(fp);
+        return 6;
+    }
+    if(res!=1){
+        printf("File corrupted");
+        fclose(fp);
+        return 6;
+    }
+
+    for(i=0;i<count;i++){
+        res=fscanf(fp,"%d",&numb);
+        temp+=1;
+        if(res!=1){
+            printf("File corrupted");
+            fclose(fp);
+            return 6;
+        }
+        sum+=numb;
+    }
+    sred=(float)sum/count;
+    if(count!=temp){
+        printf("File corrupted");
+        fclose(fp);
+        return 6;
+    }
+    fclose(fp);
+    printf("%d\n%f",sum,sred);
+    return 0;
+}

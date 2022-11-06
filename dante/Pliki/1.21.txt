@@ -1,0 +1,90 @@
+UKRYTA WIADOMOSC
+
+Napisz program, który pobierze od użytkownika nazwę pliku, a następnie odkoduje wiadomość w nim zapisaną.
+
+
+
+#include<stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main(){
+    char nazwa_zmiennej[31];
+    int temp,res,temp2,where;
+    int size=0,end=0;
+    int x;
+    char wynik;
+
+
+    printf("Podaj sciezke pliku: ");
+    scanf("%30s", nazwa_zmiennej);
+    FILE *fp;
+
+    if((fp = fopen( nazwa_zmiennej , "r"))==NULL){
+        printf("Couldn't open file");
+        return 4;
+    }
+
+    for(;;){
+        res = fscanf(fp, "%d", &temp);
+        if(res!=1){
+            printf("File corrupted");
+            fclose(fp);
+            return 6;
+        }
+
+        x=fgetc(fp);
+        if(x=='\n'){
+            break;
+        }
+    }
+    fseek(fp, 0, SEEK_SET);
+
+    for(;;){
+        if(getc(fp)!=EOF){
+            size++;
+        }
+        else{
+            break;
+        }
+    }
+
+    fseek(fp, 0, SEEK_SET);
+
+    for(;;){
+        fscanf(fp, "%d", &temp2);
+        if(temp2>=size){
+            printf("File corrupted");
+            fclose(fp);
+            return 6;
+        }
+        if(end==1){
+            break;
+        }
+        x=fgetc(fp);
+        if(x=='\n'){
+            end=1;
+        }
+    }
+
+    fseek(fp, 0, SEEK_SET);
+    end=0;
+
+    for(;;){
+        fscanf(fp, "%d", &temp);
+        where=ftell(fp);
+        if(end==1){
+            break;
+        }
+        x=fgetc(fp);
+        if(x=='\n'){
+            end=1;
+        }
+        fseek(fp, temp, SEEK_SET);
+        fscanf(fp, "%c", &wynik);
+        printf("%c", wynik);
+        fseek(fp, where, SEEK_SET);
+    }
+    fclose(fp);
+    return 0;
+}

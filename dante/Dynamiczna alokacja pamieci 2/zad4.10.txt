@@ -1,0 +1,576 @@
+Pliki i macierze
+
+Napisz program, który pobierze od użytkownika wyrażenie w postaci nazw plików z macierzami oraz operatorów +, - oraz *. Następnie wykona odpowiednie obliczenia i ostateczny wynik wyświetli na ekranie. Wykorzystaj funkcje macierzowe z zadań 4.4 Macierz, 4.5 Macierz 2 oraz 4.6 Operacje na macierzach.
+
+
+	main.c
+
+#include "matrix_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int main() {
+    char * txt = (char*) calloc(501, sizeof(char));
+    if(!txt)
+        return printf("Failed to allocate memory"), 8;
+    printf("Podaj wyrażenie: ");
+
+    fgets(txt,501,stdin);
+    if(strlen(txt)>500) while(getchar()!='\n');
+    if(*(txt+strlen(txt)-1)=='\n') *(txt+strlen(txt)-1)='\0';
+    int temp = 0;
+    for(unsigned int i = 0 ; i< strlen(txt);i++){
+        if(*(txt+i)=='+' || *(txt+i)=='-' || *(txt+i)=='*'){
+            temp = i;
+            break;
+        }
+
+    }
+
+    char * filename = (char*)calloc(temp+1, sizeof(char));
+    if(filename==NULL){
+        return printf("Failed to allocate memory"), free(txt),8;
+    }
+    for(int i = 0 ; i<temp ; i++){
+        *(filename+i)=*(txt+i);
+    }
+    struct matrix_t *result;
+    int er=0;
+
+    if(*(filename+strlen(filename)-1) == 't' && *(filename+strlen(filename)-2) == 'x' && *(filename+strlen(filename)-3) == 't' && *(filename+strlen(filename)-4) == '.'){
+        result = matrix_load_t(filename,&er);
+        if(er==2){
+            return printf("Couldn't open file"), free(txt), free(filename), 4;
+        } else if(er==3){
+            return printf("File corrupted"), free(txt), free(filename), 6;
+        } else if(er==4){
+            return printf("Failed to allocate memory"), free(txt), free(filename), 8;
+        }
+    } else if(*(filename+strlen(filename)-1) == 'n' && *(filename+strlen(filename)-2) == 'i' && *(filename+strlen(filename)-3) == 'b' && *(filename+strlen(filename)-4) == '.'){
+        result = matrix_load_b(filename,&er);
+        if(er==2){
+            return printf("Couldn't open file"), free(txt), free(filename), 4;
+        } else if(er==3){
+            return printf("File corrupted"), free(txt), free(filename), 6;
+        } else if(er==4){
+            return printf("Failed to allocate memory"), free(txt), free(filename), 8;
+        }
+    } else{
+        return printf("Unsupported file format"), free(txt), free(filename), 7;
+    }
+    struct matrix_t *druga, *temporary;
+
+    unsigned k, i, len=0;
+    for(i = temp+1 , k=0; i <= strlen(txt); i++,k++){
+        len=0;
+        for(unsigned int z = 0 ; z+i<=strlen(txt) ; z++){
+            if(*(txt+z+i)=='*' || *(txt+i+z)=='-' || *(txt+z+i)=='+' || *(txt+i+z)=='\0'){
+                break;
+            }
+            len++;
+        }
+        free(filename);
+        filename = (char*)calloc(len+1,sizeof(char));
+        if(filename==NULL)
+            return printf("Failed to allocate memory"), free(txt), matrix_destroy_struct(&result),8;
+        for(k= 0 ; k<len ;k++){
+            *(filename+k)=*(txt+i);
+            i++;
+        }
+        switch(*(txt+temp)){
+            case '+':
+                *(filename+k) = '\0';
+
+                if(*(filename+strlen(filename)-1) == 't' && *(filename+strlen(filename)-2) == 'x' && *(filename+strlen(filename)-3) == 't' && *(filename+strlen(filename)-4) == '.'){
+                    druga = matrix_load_t(filename,&er);
+                    if(er==2){
+                        return printf("Couldn't open file"), free(txt), free(filename), matrix_destroy_struct(&result),4;
+                    } else if(er==3){
+                        return printf("File corrupted"), free(txt), free(filename), matrix_destroy_struct(&result),6;
+                    } else if(er==4){
+                        return printf("Failed to allocate memory"), free(txt), free(filename), matrix_destroy_struct(&result),8;
+                    }
+                } else if(*(filename+strlen(filename)-1) == 'n' && *(filename+strlen(filename)-2) == 'i' && *(filename+strlen(filename)-3) == 'b' && *(filename+strlen(filename)-4) == '.'){
+                    druga = matrix_load_b(filename,&er);
+                    if(er==2){
+                        return printf("Couldn't open file"), free(txt), free(filename), matrix_destroy_struct(&result),4;
+                    } else if(er==3){
+                        return printf("File corrupted"), free(txt), matrix_destroy_struct(&result),free(filename), 6;
+                    } else if(er==4){
+                        return printf("Failed to allocate memory"), free(txt), free(filename), matrix_destroy_struct(&result),8;
+                    }
+                } else{
+                    return printf("Unsupported file format"), free(txt), free(filename), matrix_destroy_struct(&result),7;
+                }
+
+                temporary= matrix_add(result, druga);
+                if(!temporary){
+                    return printf("Illegal operation"), free(txt), free(filename), matrix_destroy_struct(&result), matrix_destroy_struct(&druga), 1;
+                }
+                matrix_destroy_struct(&result);
+                matrix_destroy_struct(&druga);
+                result = temporary;
+                temp = i;
+                break;
+            case '*':
+                *(filename+k) = '\0';
+
+                if(*(filename+strlen(filename)-1) == 't' && *(filename+strlen(filename)-2) == 'x' && *(filename+strlen(filename)-3) == 't' && *(filename+strlen(filename)-4) == '.'){
+                    druga = matrix_load_t(filename,&er);
+                    if(er==2){
+                        return printf("Couldn't open file"), free(txt), free(filename), matrix_destroy_struct(&result),4;
+                    } else if(er==3){
+                        return printf("File corrupted"), free(txt), free(filename), matrix_destroy_struct(&result),6;
+                    } else if(er==4){
+                        return printf("Failed to allocate memory"), free(txt), free(filename), matrix_destroy_struct(&result),8;
+                    }
+                } else if(*(filename+strlen(filename)-1) == 'n' && *(filename+strlen(filename)-2) == 'i' && *(filename+strlen(filename)-3) == 'b' && *(filename+strlen(filename)-4) == '.'){
+                    druga = matrix_load_b(filename,&er);
+                    if(er==2){
+                        return printf("Couldn't open file"), free(txt), free(filename), matrix_destroy_struct(&result),4;
+                    } else if(er==3){
+                        return printf("File corrupted"), free(txt), matrix_destroy_struct(&result),free(filename), 6;
+                    } else if(er==4){
+                        return printf("Failed to allocate memory"), free(txt), free(filename), matrix_destroy_struct(&result),8;
+                    }
+                } else{
+                    return printf("Unsupported file format"), free(txt), free(filename), matrix_destroy_struct(&result),7;
+                }
+
+                temporary= matrix_multiply(result, druga);
+                if(!temporary){
+                    return printf("Illegal operation"), free(txt), free(filename), matrix_destroy_struct(&result), matrix_destroy_struct(&druga), 1;
+                }
+                matrix_destroy_struct(&result);
+                matrix_destroy_struct(&druga);
+                result = temporary;
+                temp = i;
+                break;
+            case '-':
+                *(filename+k) = '\0';
+
+                if(*(filename+strlen(filename)-1) == 't' && *(filename+strlen(filename)-2) == 'x' && *(filename+strlen(filename)-3) == 't' && *(filename+strlen(filename)-4) == '.'){
+                    druga = matrix_load_t(filename,&er);
+                    if(er==2){
+                        return printf("Couldn't open file"), free(txt), free(filename), matrix_destroy_struct(&result),4;
+                    } else if(er==3){
+                        return printf("File corrupted"), free(txt), free(filename), matrix_destroy_struct(&result),6;
+                    } else if(er==4){
+                        return printf("Failed to allocate memory"), free(txt), free(filename), matrix_destroy_struct(&result),8;
+                    }
+                } else if(*(filename+strlen(filename)-1) == 'n' && *(filename+strlen(filename)-2) == 'i' && *(filename+strlen(filename)-3) == 'b' && *(filename+strlen(filename)-4) == '.'){
+                    druga = matrix_load_b(filename,&er);
+                    if(er==2){
+                        return printf("Couldn't open file"), free(txt), free(filename), matrix_destroy_struct(&result),4;
+                    } else if(er==3){
+                        return printf("File corrupted"), free(txt), matrix_destroy_struct(&result),free(filename), 6;
+                    } else if(er==4){
+                        return printf("Failed to allocate memory"), free(txt), free(filename), matrix_destroy_struct(&result),8;
+                    }
+                } else{
+                    return printf("Unsupported file format"), free(txt), free(filename), matrix_destroy_struct(&result),7;
+                }
+
+                temporary= matrix_subtract(result, druga);
+                if(!temporary){
+                    return printf("Illegal operation"), free(txt), free(filename), matrix_destroy_struct(&result), matrix_destroy_struct(&druga), 1;
+                }
+                matrix_destroy_struct(&result);
+                matrix_destroy_struct(&druga);
+                result = temporary;
+                temp = i;
+                break;
+        }
+    }
+
+    matrix_display(result);
+    free(txt);
+    free(filename);
+    matrix_destroy_struct(&result);
+    return 0;
+}
+
+
+matrix_utils.c
+
+#include "matrix_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+
+void matrix_destroy(struct matrix_t *m) {
+    if (m == NULL) {
+        return;
+    }
+    int **ptr = m->ptr;
+    if (ptr != NULL) {
+        int i;
+        for (i = 0; i < m->height; i++) {
+            free(*(ptr + i));
+        }
+        free(ptr);
+    }
+}
+
+int matrix_create(struct matrix_t *m, int width, int height) {
+    if (m == NULL || width < 1 || height < 1) {
+        return 1;
+    }
+    m->ptr = malloc(sizeof(int *) * height);
+    if (m->ptr == NULL) {
+        return 2;
+    }
+    int i;
+    for (i = 0; i < height; i++) {
+        *(m->ptr + i) = malloc(sizeof(int) * width);
+        if (*(m->ptr + i) == NULL) {
+            m->height = i;
+            matrix_destroy(m);
+            return 2;
+        }
+    }
+    m->height = height;
+    m->width = width;
+    return 0;
+}
+
+int matrix_read(struct matrix_t *m) {
+    if (m == NULL || m->ptr == NULL || m->height < 1 || m->width < 1) {
+        return 1;
+    }
+    int i, j;
+    for (i = 0; i < m->height; i++) {
+        for (j = 0; j < m->width; j++) {
+            if (scanf("%d", (*(m->ptr + i) + j)) != 1) {
+                return 2;
+            }
+        }
+    }
+    return 0;
+}
+
+void matrix_display(const struct matrix_t *m) {
+    if (m == NULL || m->ptr == NULL || m->height < 1 || m->width < 1) {
+        return;
+    }
+    int i, j;
+    for (i = 0; i < m->height; i++) {
+        for (j = 0; j < m->width; j++) {
+            printf("%d ", *(*(m->ptr + i) + j));
+        }
+        printf("\n");
+    }
+}
+
+struct matrix_t* matrix_create_struct(int width, int height){
+    if(width <= 0 || height <=0)
+        return NULL;
+
+    struct matrix_t *wsk = (struct matrix_t*)calloc(1, sizeof(struct matrix_t));
+    if(wsk==NULL)
+        return wsk;
+
+    wsk->ptr = (int**) calloc(height,sizeof(int*));
+    if(!wsk->ptr){
+        free(wsk);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < height ; i++){
+        *(wsk->ptr+i) = (int*) calloc(width,sizeof(int));
+        if(!(*(wsk->ptr+i))){
+            for(int j = i-1 ; j>=0 ; j--){
+                free(*(wsk->ptr+j));
+            }
+            free(wsk->ptr);
+            free(wsk);
+            return NULL;
+        }
+    }
+    wsk->height = height;
+    wsk->width = width;
+    return wsk;
+}
+
+void matrix_destroy_struct(struct matrix_t **m){
+    if(!m)
+        return;
+    for(int i = 0 ; i< (*m)->height ; i++){
+        free(*((*m)->ptr+i));
+    }
+    free((*m)->ptr);
+    free((*m));
+    *m=NULL;
+}
+
+struct matrix_t* matrix_copy(const struct matrix_t *copy){
+    if(copy == NULL || copy->ptr == NULL  || copy->width < 1 || copy->height < 1)
+        return NULL;
+
+    struct matrix_t * c = matrix_create_struct(copy->width, copy->height);
+    if(c == NULL)
+        return c;
+
+    for(int i = 0 ; i < c->height ; i++){
+        for(int j = 0 ; j< c->width ; j++) {
+            *(*(c->ptr + i) + j) = *(*(copy->ptr + i) + j);
+        }
+    }
+    return c;
+}
+
+struct matrix_t* matrix_add(const struct matrix_t *m1, const struct matrix_t *m2){
+    if(m1==NULL || m1->ptr == NULL || m1->width < 1 || m1->height < 1 || m2==NULL || m2->ptr == NULL || m2->width < 1 || m2->height < 1)
+        return NULL;
+    if(m1->width!=m2->width)
+        return NULL;
+    if(m1->height!=m2->height)
+        return NULL;
+    struct matrix_t *result = matrix_create_struct(m1->width, m1->height);
+    if(result==NULL)
+        return result;
+
+    for(int i = 0 ; i < result->height ; i++){
+        for(int j = 0 ; j < result->width ; j++){
+            *(*(result->ptr+i)+j) = *(*(m1->ptr+i)+j)+ *(*(m2->ptr+i)+j);
+        }
+    }
+
+    return result;
+}
+struct matrix_t* matrix_subtract(const struct matrix_t *m1, const struct matrix_t *m2){
+    if(m1==NULL || m1->ptr == NULL || m1->width < 1 || m1->height < 1 || m2==NULL || m2->ptr == NULL || m2->width < 1 || m2->height < 1)
+        return NULL;
+    if(m1->width!=m2->width)
+        return NULL;
+    if(m1->height!=m2->height)
+        return NULL;
+    struct matrix_t *result = matrix_create_struct(m1->width, m1->height);
+    if(result==NULL)
+        return result;
+
+    for(int i = 0 ; i < result->height ; i++){
+        for(int j = 0 ; j < result->width ; j++){
+            *(*(result->ptr+i)+j) = *(*(m1->ptr+i)+j)- *(*(m2->ptr+i)+j);
+        }
+    }
+
+    return result;
+}
+
+struct matrix_t* matrix_multiply(const struct matrix_t *m1, const struct matrix_t *m2){
+    if(m1 == NULL || m2 == NULL || m1->ptr ==NULL || m2->ptr==NULL || m1->width < 1 || m2->width< 1 || m1->height < 1 || m2-> height< 1 || m1->width!=m2->height || m1->height!=m2->width)
+        return NULL;
+
+    struct matrix_t *result;
+    int width, height, width_;
+    if(m1->width == m2->height) {
+        width = m1->width;
+        height = m1->height;
+        width_ = m2->width;
+        result = matrix_create_struct(width_, height);
+        if(result==NULL)
+            return NULL;
+        for(int i = 0 ; i< result->height ; i++){
+            for(int j = 0 ; j < result->width; j++){
+                *(*(result->ptr+i)+j)=0;
+            }
+        }
+        for(int i = 0 ; i < height; i++){
+            for(int j = 0 ; j < width_ ; j ++){
+                for(int k = 0 ; k < width ; k++){
+                    int a = (*(*(m1->ptr+i)+k));
+                    int b = (*(*(m2->ptr+k)+j));
+                    *(*(result->ptr+i)+j) += (a * b);
+                }
+            }
+        }
+    } else{
+        width = m2->width;
+        height = m2->height;
+        width_ = m1->width;
+        result = matrix_create_struct(width_, height);
+        if(result==NULL)
+            return NULL;
+        for(int i = 0 ; i< result->height ; i++){
+            for(int j = 0 ; j < result->width; j++){
+                *(*(result->ptr+i)+j)=0;
+            }
+        }
+        for(int i = 0 ; i < height; i++){
+            for(int j = 0 ; j < width_ ; j ++){
+                for(int k = 0 ; k < width ; k++){
+                    int a = (*(*(m2->ptr+i)+k));
+                    int b = (*(*(m1->ptr+k)+j));
+                    *(*(result->ptr+i)+j) += (a * b);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+struct matrix_t* matrix_load_b(const char *filename, int *err_code){
+    if(err_code)
+        *err_code=0;
+    if(filename==NULL){
+        if(err_code)
+            *err_code = 1;
+        return NULL;
+    }
+
+    FILE * f = fopen(filename, "rb");
+    if(f == NULL){
+        if(err_code)
+            *err_code = 2;
+        return NULL;
+    }
+
+    int width, height;
+
+    if(fread(&width, sizeof(int), 1, f)<=0){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        return NULL;
+    }
+    if(fread(&height, sizeof(int), 1, f)<=0){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        return NULL;
+    }
+
+    if(width < 1 || height < 1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        return NULL;
+    }
+    struct matrix_t * result = matrix_create_struct(width, height);
+    if(result == NULL){
+        if(err_code)
+            *err_code = 4;
+        fclose(f);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height ; i ++){
+        for(int j = 0 ; j < result->width ; j++){
+            int a=0;
+            if(fread(&a, sizeof(int), 1, f)<=0){
+                if(err_code)
+                    *err_code=3;
+                fclose(f);
+                matrix_destroy_struct(&result);
+                return NULL;
+            }
+            *(*(result->ptr+i)+j) = a;
+        }
+    }
+    fclose(f);
+    return result;
+}
+
+struct matrix_t* matrix_load_t(const char *filename, int *err_code){
+    if(err_code)
+        *err_code=0;
+    if(filename==NULL){
+        if(err_code)
+            *err_code = 1;
+        return NULL;
+    }
+
+    FILE * f = fopen(filename, "r");
+    if(f == NULL){
+        if(err_code)
+            *err_code = 2;
+        return NULL;
+    }
+
+    int width, height;
+
+    if(fscanf(f, "%d",&width)!=1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        return NULL;
+    }
+    if(fscanf(f,"%d",&height)!=1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        return NULL;
+    }
+
+    if(width < 1 || height < 1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        return NULL;
+    }
+
+    struct matrix_t * result = matrix_create_struct(width, height);
+    if(result == NULL){
+        if(err_code)
+            *err_code = 4;
+        fclose(f);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height ; i ++){
+        for(int j = 0 ; j < result->width ; j++){
+            int a=0;
+            if(fscanf(f,"%d",&a)!=1){
+                if(err_code)
+                    *err_code=3;
+                fclose(f);
+                matrix_destroy_struct(&result);
+                return NULL;
+            }
+            *(*(result->ptr+i)+j) = a;
+        }
+    }
+    fclose(f);
+    return result;
+}
+
+	matrix_utils.h
+
+//
+// Created by root on 6/26/21.
+//
+
+#ifndef PROJECT1_MATRIX_UTILS_H
+#define PROJECT1_MATRIX_UTILS_H
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+struct matrix_t{
+    int **ptr;
+    int width;
+    int height;
+};
+
+int matrix_create(struct matrix_t *m, int width, int height);
+int matrix_read(struct matrix_t *m);
+void matrix_display(const struct matrix_t *m);
+void matrix_destroy(struct matrix_t *m);
+
+struct matrix_t* matrix_create_struct(int width, int height);
+
+void matrix_destroy_struct(struct matrix_t **m);
+
+struct matrix_t* matrix_copy(const struct matrix_t *copy);
+
+struct matrix_t* matrix_load_b(const char *filename, int *err_code);
+struct matrix_t* matrix_load_t(const char *filename, int *err_code);
+
+struct matrix_t* matrix_add(const struct matrix_t *m1, const struct matrix_t *m2);
+struct matrix_t* matrix_subtract(const struct matrix_t *m1, const struct matrix_t *m2);
+struct matrix_t* matrix_multiply(const struct matrix_t *m1, const struct matrix_t *m2);
+
+#endif //PROJECT1_MATRIX_UTILS_H

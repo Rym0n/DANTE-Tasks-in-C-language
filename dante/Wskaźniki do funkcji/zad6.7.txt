@@ -1,0 +1,155 @@
+Sortowanie 2D
+Napisz funkcję, która sortuje w miejscu dwuwymiarową tablicę liczb typu int wierszami rosnąco za pomocą funkcji komparującej, danej wskaźnikiem. Wskaźnik ma być zbudowany w oparciu o następujący prototyp:
+
+
+
+
+main.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "comparators.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int main()
+{
+    printf("Enter width and height: ");
+    int width, height;
+    int err = scanf("%d %d", &width, &height);
+    if (err != 2) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (width <= 0 || height <= 0) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    int **array = malloc(height * sizeof(int*));
+    if (!array) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    for (int i = 0; i < height; ++i) {
+        *(array+i) = malloc(width * sizeof(int));
+        if (!*(array+i)) {
+            for (int j = 0; j < i; ++j) free(*(array+j));
+            free(array);
+            printf("Failed to allocate memory");
+            return 8;
+        }
+    }
+    printf("Enter data: ");
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            err = scanf("%d", *(array+i)+j);
+            if (err != 1) {
+                printf("Incorrect input");
+                for (int ii = 0; ii < height; ++ii) free(*(array+ii));
+                free(array);
+                return 1;
+            }
+        }
+    }
+    printf("Selection choice: ");
+    int choice;
+    err = scanf("%d", &choice);
+    if (err != 1) {
+        printf("Incorrect input");
+        for (int i = 0; i < height; ++i) free(*(array+i));
+        free(array);
+        return 1;
+    }
+    if (choice < 0 || choice > 2) {
+        printf("Incorrect input data");
+        for (int i = 0; i < height; ++i) free(*(array+i));
+        free(array);
+        return 2;
+    }
+    if (choice == 0) sort_rows(array, width, height, comp_min);
+    else if (choice == 1) sort_rows(array, width, height, comp_max);
+    else sort_rows(array, width, height, comp_sum);
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) printf("%d ", *(*(array+i)+j));
+        printf("\n");
+    }
+    for (int i = 0; i < height; ++i) free(*(array+i));
+    free(array);
+    return 0;
+}
+
+
+comparators.h
+
+#ifndef COMPARATORS
+#define COMPARATORS
+
+int comp_min(const int *ptr1, const int *ptr2, int width);
+int comp_max(const int *ptr1, const int *ptr2, int width);
+int comp_sum(const int *ptr1, const int *ptr2, int width);
+int sort_rows(int **array, int width, int height, int(*func)(const int*, const int*, int));
+
+#endif
+
+
+comparators.c
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "comparators.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int comp_min(const int *ptr1, const int *ptr2, int width)
+{
+    if (!ptr1 || !ptr2 || width <= 0) return 2;
+    int min1 = *ptr1, min2 = *ptr2;
+    for (int i = 1; i < width; ++i) {
+        if (*(ptr1+i) < min1) min1 = *(ptr1+i);
+        if (*(ptr2+i) < min2) min2 = *(ptr2+i);
+    }
+    if (min1 > min2) return 1;
+    if (min1 < min2) return -1;
+    return 0;
+}
+int comp_max(const int *ptr1, const int *ptr2, int width)
+{
+    if (!ptr1 || !ptr2 || width <= 0) return 2;
+    int max1 = *ptr1, max2 = *ptr2;
+    for (int i = 1; i < width; ++i) {
+        if (*(ptr1+i) > max1) max1 = *(ptr1+i);
+        if (*(ptr2+i) > max2) max2 = *(ptr2+i);
+    }
+    if (max1 > max2) return 1;
+    if (max1 < max2) return -1;
+    return 0;
+}
+int comp_sum(const int *ptr1, const int *ptr2, int width)
+{
+    if (!ptr1 || !ptr2 || width <= 0) return 2;
+    int sum1 = *ptr1, sum2 = *ptr2;
+    for (int i = 1; i < width; ++i) {
+        sum1 += *(ptr1+i);
+        sum2 += *(ptr2+i);
+    }
+    if (sum1 > sum2) return 1;
+    if (sum1 < sum2) return -1;
+    return 0;
+}
+int sort_rows(int **array, int width, int height, int(*func)(const int*, const int*, int))
+{
+    if (!array || !*array || !func || width <= 0 || height <= 0) return 1;
+    for (int i = 0; i < height; ++i) {
+        for (int j = 1; j < height; ++j) {
+            if (func(*(array+j-1), *(array+j), width) == 1) {
+                int *tmp=*(array+j);
+                *(array+j)=*(array+j-1);
+                *(array+j-1)=tmp;
+            }
+        }
+    }
+    return 0;
+}

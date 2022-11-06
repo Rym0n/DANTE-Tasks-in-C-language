@@ -1,0 +1,380 @@
+ukryta wiadomosc
+
+Napisz program, który będzie potrafił ukryć wiadomość w obrazie graficznym. Proces takiego ukrywania/kodowania wiadomości nazywa się steganografią. Jest to nauka o komunikacji w taki sposób, by obecność komunikatu nie mogła zostać wykryta.
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+//Bajty w procesorze są zapisane w systemie little-endian. Tekst w obrazie zapisany jest w bitach od największego do najmniejszego,  więc musimy wczytywać liczbę do unii "od końca"
+union decoding {
+    unsigned char liczba;
+    struct {
+        unsigned char a : 1;
+        unsigned char b : 1;
+        unsigned char c : 1;
+        unsigned char d : 1;
+        unsigned char e : 1;
+        unsigned char f : 1;
+        unsigned char g : 1;
+        unsigned char h : 1;
+    };
+};
+
+
+int decode(const char * filename, char *txt, int size) {
+    if (filename == NULL || txt == NULL || size < 1)
+        return 1;
+    FILE *f = fopen(filename, "r");
+    if (!f)     return 2;
+    union decoding wejscie, wyjscie;
+    int liczba;
+    int i = 0;
+    int temp=0;
+    while (!feof(f)) {
+        //// bit1:
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            if (feof(f))
+                return 0;
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.h = wejscie.a;
+        temp+=1;
+
+        //// bit2
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.g = wejscie.a;
+        temp+=1;
+
+        //// bit3
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.f = wejscie.a;
+        temp+=1;
+
+        //// bit4
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.e = wejscie.a;
+        temp+=1;
+
+        //// bit5
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.d = wejscie.a;
+        temp+=1;
+
+        //// bit6
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.c = wejscie.a;
+        temp+=1;
+
+        //// bit7
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.b = wejscie.a;
+        temp+=1;
+
+        //// bit8
+        if (fscanf(f, "%d", &liczba) < 1) {
+            fclose(f);
+            return 3;
+        }
+        wejscie.liczba = liczba;
+        wyjscie.a = wejscie.a;
+        temp=0;
+        if (wyjscie.liczba == 0)
+            break;
+        else if (i + 1 < size) {
+            *(txt + i++) = (char)wyjscie.liczba;
+            *(txt + i) = '\0';
+        } else {
+            fclose(f);
+            return 0;
+        }
+    }
+    if(temp!=0){
+        fclose(f);
+        return 3;
+    }
+    fclose(f);
+    return 0;
+}
+
+
+char check_white_symbols(FILE *f) {
+    char c = fgetc(f);
+    if (!isspace(c)) {
+        fseek(f, -1, SEEK_CUR);
+    }
+    return c;
+}
+
+
+int encode(const char *input, char *txt, const char *output) {
+    if (!input || !txt || !output)
+        return 1;
+    FILE *odczyt = fopen(input, "r");
+    if (!odczyt)
+        return 2;
+    FILE *zapis = fopen(output, "w");
+    if (!zapis) {
+        fclose(odczyt);
+        return 4;
+    }
+    int liczba, i = 0,size;
+    int length = (int)strlen(txt);
+    char whitespace;
+    union decoding wejscie, wyjscie;
+    fseek(odczyt, 0, SEEK_END);
+    size=ftell(odczyt);
+    fseek(odczyt, 0, SEEK_SET);
+    if((int)strlen(txt)*8>size){
+        fclose(odczyt);
+        fclose(zapis);
+        return 3;
+    }
+
+    while (!feof(odczyt)) {
+        if (i < length) {
+            //// bit1:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                if (feof(odczyt))
+                    return 0;
+                return 3;
+            }
+            wejscie.liczba = *(txt + i++);
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.h;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+            //// bit2:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 3;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.g;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+            //// bit3:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 3;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.f;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+            //// bit4:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 3;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.e;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+            //// bit5:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 3;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.d;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+            //// bit6:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 3;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.c;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+            //// bit7:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 3;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.b;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+            //// bit8:
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 3;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = wejscie.a;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+
+        } else {
+
+            if (fscanf(odczyt, "%d", &liczba) < 1) {
+                fclose(odczyt);
+                fclose(zapis);
+                return 0;
+            }
+            wyjscie.liczba = (unsigned char)liczba;
+            wyjscie.a = 0;
+            fprintf(zapis, "%d", (int)wyjscie.liczba);
+            while (isspace((whitespace = check_white_symbols(odczyt)))) {
+                if (whitespace == EOF)
+                    break;
+                fprintf(zapis, "%c", whitespace);
+            }
+        }
+    }
+    fclose(odczyt);
+    fclose(zapis);
+    return 0;
+}
+
+
+void get_line(char *str, int size) {
+    char c;
+    for (int i = 0; i < size; ++i) {
+        c = getchar();
+        if (c == '\n') {
+            *(str + i) = '\0';
+            return;
+        }
+        else if (i + 1 == size) {
+            i--;
+        }
+        else {
+            *(str + i) = c;
+        }
+    }
+}
+
+
+int main() {
+    char filename1[30], filename2[30];
+    char encoded_text[1001];
+    char decision;
+    printf("Kodujemy czy dekodujemy?(E/D) ");
+    decision = getchar();
+    getchar();
+    int x;
+    if (toupper(decision) == 'D') {
+        printf("Podaj nazwe pliku: ");
+        get_line(filename1, 30);
+        x = decode(filename1, encoded_text, 1001);
+        if (x == 3) {
+            printf("File corrupted");
+            return 6;
+        }
+        else if (x == 2) {
+            printf("Couldn't open file");
+            return 4;
+        }
+        printf("%s", encoded_text);
+    }
+    else if (toupper(decision) == 'E') {
+        printf("Podaj tekst do zakodowania:\n");
+        get_line(encoded_text, 1001);
+        printf("Podaj nazwe pliku z obrazem: ");
+        get_line(filename1, 30);
+        printf("Podaj nazwe pliku wyjsciowego: ");
+        get_line(filename2, 30);
+        x = encode(filename1, encoded_text, filename2);
+        if (x == 0) {
+            printf("File saved");
+            return 0;
+        }
+        else if (x == 2) {
+            printf("Couldn't open file");
+            return 4;
+        }
+        else if (x == 4) {
+            printf("Couldn't create file");
+            return 5;
+        }
+        else if (x == 3) {
+            printf("File corrupted");
+            return 6;
+        }
+    }
+    else {
+        printf("Incorrect input data");
+        return 1;
+    }
+    return 0;
+}

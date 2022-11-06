@@ -1,0 +1,59 @@
+Makra - podejście pierwsze
+
+
+main.c
+
+#include <stdio.h>
+#include "functions.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    printf("Enter data type: ");
+    int type;
+    int err = scanf("%d", &type);
+    if (err != 1) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (type == 0) {
+        printf("Enter numbers: ");
+        int x, y;
+        err = scanf("%d %d", &x, &y);
+        if (err != 2) {
+            printf("Incorrect input");
+            return 1;
+        }
+        printf("%d\n%d\n%d\n%d", SQR(x), SQR(y), MAX(x, y), MIN(x, y));
+    }
+    else if (type == 1) {
+        printf("Enter numbers: ");
+        float x, y;
+        err = scanf("%f %f", &x, &y);
+        if (err != 2) {
+            printf("Incorrect input");
+            return 1;
+        }
+        printf("%f\n%f\n%f\n%f", SQR(x), SQR(y), MAX(x, y), MIN(x, y));
+    }
+    else {
+        printf("Incorrect input data");
+        return 2;
+    }
+    return 0;
+}
+
+
+
+functions.h
+
+
+#ifndef FUNCS
+#define FUNCS
+
+#define SQR(x) ((x)*(x))
+#define MIN(x, y) ((x)<(y)?(x):(y))
+#define MAX(x, y) ((x)>(y)?(x):(y))
+
+#endif

@@ -1,0 +1,161 @@
+8. Sortowania ciąg dalszy
+
+Napisz funkcję sort, która sortuje w miejscu tablicę dowolnego typu, daną wskaźnikiem.
+
+Funkcja ma przyjąć jako parametry:
+
+wskaźnik na tablicę do sortowania,
+liczbę elementów tablicy,
+rozmiar pojedynczego elementu tablicy oraz
+wskaźnik na funkcję, porównującą wartości dwóch elementów.
+Wskaźnik komparatora ma być zbudowany w oparciu o następujący prototyp:
+
+
+
+
+main.c
+#include <stdio.h>
+#include <stdlib.h>
+#include "comparators.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int main()
+{
+    int type, size;
+    printf("Enter data type: ");
+    int err = scanf("%d", &type);
+    if (err != 1 || type < 0 || type > 2) {
+        printf("Incorrect input");
+        return 1;
+    }
+    printf("Enter array size: ");
+    err = scanf("%d", &size);
+    if (err !=1) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (size <= 0) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    int typesize = type * 8 + (!type * 4);
+    void *array = malloc(size * typesize);
+    if (!array) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    if (type == 0) {
+        printf("Enter ints: ");
+        for(int i = 0; i < size; ++i) {
+            err = scanf("%d", (int*)array+i);
+            if(err != 1) {
+                printf("Incorrect input");
+                free(array);
+                return 1;
+            }
+        }
+        sort(array, size, typesize, comp_int);
+        for (int i = 0; i < size; ++i) printf("%d ", *((int*)array+i));
+    }
+    else if (type == 1) {
+        printf("Enter doubles: ");
+        for(int i = 0; i < size; ++i) {
+            err = scanf("%lf", (double*)array+i);
+            if(err != 1) {
+                printf("Incorrect input");
+                free(array);
+                return 1;
+            }
+        }
+        sort(array, size, typesize, comp_double);
+        for (int i = 0; i < size; ++i) printf("%lf ", *((double*)array+i));
+    }
+    else {
+        printf("Enter points: ");
+        for(int i = 0; i < size; ++i) {
+            double x, y;
+            err = scanf("%lf %lf", &x, &y);
+            if(err != 2) {
+                printf("Incorrect input");
+                free(array);
+                return 1;
+            }
+            ((struct point_t*)array+i)->x=x;
+            ((struct point_t*)array+i)->y=y;
+        }
+        sort(array, size, typesize, comp_double);
+        for (int i = 0; i < size; ++i) printf("%lf %lf\n", ((struct point_t*)array+i)->x, ((struct point_t*)array+i)->y);
+    }
+    free(array);
+    return 0;
+}
+
+comparators.h
+
+#ifndef COMPARATORS
+#define COMPARATORS
+
+struct point_t
+{
+    double x;
+    double y;
+};
+int comp_int(const void *ptr1, const void *ptr2);
+int comp_double(const void *ptr1, const void *ptr2);
+int comp_point(const void *ptr1, const void *ptr2);
+int sort(void *ptr, int size, size_t typesize, int (*func)(const void*, const void*));
+
+#endif
+
+comparators.c
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "comparators.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int comp_int(const void *ptr1, const void *ptr2)
+{
+    if (!ptr1 || !ptr2) return 0;
+    if (*((int*)ptr1) > *((int*)ptr2)) return 1;
+    else if (*((int*)ptr1) == *((int*)ptr2)) return 0;
+    else return -1;
+}
+int comp_double(const void *ptr1, const void *ptr2)
+{
+    if (!ptr1 || !ptr2) return 0;
+    if (*((double*)ptr1) > *((double*)ptr2)) return 1;
+    else if (*((double*)ptr1) == *((double*)ptr2)) return 0;
+    else return -1;
+}
+int comp_point(const void *ptr1, const void *ptr2)
+{
+    if (!ptr1 || !ptr2) return 0;
+    if (((struct point_t*)ptr1)->x > ((struct point_t*)ptr2)->x) return 1;
+    else if (((struct point_t*)ptr1)->x < ((struct point_t*)ptr2)->x) return -1;
+    else if (((struct point_t*)ptr1)->y > ((struct point_t*)ptr2)->y) return 1;
+    else if (((struct point_t*)ptr1)->y < ((struct point_t*)ptr2)->y) return -1;
+    else return 0;
+}
+int sort(void *ptr, int size, size_t typesize, int (*func)(const void*, const void*))
+{
+    if (!ptr || !func || size <= 0) return 1;
+    void *tmp = malloc(typesize);
+    if (!tmp) return 1;
+    for (int i = 0; i < size; ++i) {
+        for (int j = 1; j < size; ++j) {
+            if(func((char*)ptr+(j-1)*typesize, (char*)ptr+j*typesize)>0) {
+                memcpy(tmp, (char*)ptr+j*typesize, typesize);
+                memcpy((char*)ptr+j*typesize, (char*)ptr+(j-1)*typesize, typesize);
+                memcpy((char*)ptr+(j-1)*typesize, tmp, typesize);
+            }
+        }
+    }
+    free(tmp);
+    return 0;
+}

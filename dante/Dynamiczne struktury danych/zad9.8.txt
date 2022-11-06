@@ -1,0 +1,225 @@
+Lista jednokierunkowa - dodawanie wyrazów do posortowanej listy
+
+
+linked_list.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "linked_list.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+struct linked_list_t* ll_create()
+{
+    return calloc(1, sizeof(struct linked_list_t));
+}
+int ll_push_back(struct linked_list_t* ll, char *value)
+{
+    if (!ll || (ll->head && !ll->tail) || (!ll->head && ll->tail)) return 1;
+    struct node_t *node = malloc(sizeof(struct node_t));
+    if (!node) return 2;
+    node->data = malloc(strlen(value) + 1);
+    if (!node->data) {
+        free(node);
+        return 2;
+    }
+    node->next = NULL;
+    strcpy(node->data, value);
+    if (ll->tail) ll->tail->next = node;
+    else ll->head = node;
+    ll->tail = node;
+    return 0;
+}
+int ll_push_front(struct linked_list_t* ll, char *value)
+{
+    if (!ll || (ll->head && !ll->tail) || (!ll->head && ll->tail)) return 1;
+    struct node_t *node = malloc(sizeof(struct node_t));
+    if (!node) return 2;
+    node->data = malloc(strlen(value) + 1);
+    if (!node->data) {
+        free(node);
+        return 2;
+    }
+    node->next = ll->head;
+    strcpy(node->data, value);
+    ll->head = node;
+    if (!ll->tail) ll->tail = node;
+    return 0;
+}
+int ll_size(const struct linked_list_t* ll)
+{
+    if (!ll || (ll->head && !ll->tail) || (!ll->head && ll->tail)) return -1;
+    struct node_t *tmp = ll->head;
+    int size = 0;
+    while (tmp) {
+        tmp = tmp->next;
+        size++;
+    }
+    return size;
+}
+int ll_is_empty(const struct linked_list_t* ll)
+{
+    if (!ll || (ll->head && !ll->tail) || (!ll->head && ll->tail)) return -1;
+    if (ll->head) return 0;
+    else return 1;
+}
+void ll_clear(struct linked_list_t* ll)
+{
+    if (!ll) return;
+    struct node_t *tmp = ll->head;
+    while (tmp) {
+        ll->head = tmp->next;
+        free(tmp->data);
+        free(tmp);
+        tmp = ll->head;
+    }
+    ll->head = NULL;
+    ll->tail = NULL;
+}
+void ll_display(const struct linked_list_t* ll)
+{
+    if (!ll || !ll->head || !ll->tail) return;
+    struct node_t *tmp = ll->head;
+    while (tmp) {
+        printf("%s ", tmp->data);
+        tmp = tmp->next;
+    }
+}
+int ll_is_sorted_ascending(const struct linked_list_t* ll)
+{
+    if (!ll || !ll->head || !ll->tail) return -1;
+    struct node_t *tmp = ll->head;
+    while (tmp->next) {
+        int cmp = strcmp(tmp->data, tmp->next->data);
+        if (cmp > 0) return 0;
+        tmp = tmp->next;
+    }
+    return 1;
+}
+int ll_insert_words(struct linked_list_t* ll, int N, ...)
+{
+    if (!ll || (ll->head && !ll->tail) || (!ll->head && ll->tail) || N <= 0 || !ll_is_sorted_ascending(ll)) return -1;
+    va_list v1, v2;
+    va_start(v1, N);
+    va_copy(v2, v1);
+    int n = 0;
+    for (int i = 0; i < N; ++i) {
+        struct node_t *node = malloc(sizeof(struct node_t));
+        if (!node) {
+            va_end(v1);
+            va_end(v2);
+            return n;
+        }
+        node->data = malloc(strlen(va_arg(v1, char*)) + 1);
+        if (!node->data) {
+            va_arg(v2, char*);
+        free(node);
+            continue;
+        }
+        strcpy(node->data, va_arg(v2, char*));
+        node->next = NULL;
+        if (ll_is_empty(ll)) {
+            ll->head = node;
+            ll->tail = node;
+        n++;
+            continue;
+        }
+        struct node_t *tmp = ll->head;
+        while (tmp) {
+            int cmp = strcmp(tmp->data, node->data);
+            if (cmp > 0) {
+                if (tmp == ll->head) {
+                    node->next = tmp;
+                    ll->head = node;
+                    break;
+                }
+                node->next = tmp;
+                struct node_t *tmp2 = ll->head;
+                while (tmp2->next != tmp) tmp2 = tmp2->next;
+                tmp2->next = node;
+                break;
+            }
+            tmp = tmp->next;
+        }
+        if (!node->next) {
+            tmp = ll->head;
+            while (tmp->next) tmp = tmp->next;
+            tmp->next = node;
+            ll->tail = node;
+        }
+        n++;
+    }
+    va_end(v1);
+    va_end(v2);
+    return n;
+}
+
+linked_list.h
+
+#ifndef LIST
+#define LIST
+
+struct linked_list_t
+{
+    struct node_t *head;
+    struct node_t *tail;
+};
+
+struct node_t
+{
+    char *data;
+    struct node_t *next;
+};
+struct linked_list_t* ll_create();
+
+int ll_push_back(struct linked_list_t* ll, char *value);
+int ll_push_front(struct linked_list_t* ll, char *value);
+
+int ll_size(const struct linked_list_t* ll);
+int ll_is_empty(const struct linked_list_t* ll);
+
+void ll_clear(struct linked_list_t* ll);
+
+void ll_display(const struct linked_list_t* ll);
+
+int ll_is_sorted_ascending(const struct linked_list_t* ll);
+int ll_insert_words(struct linked_list_t* ll, int N, ...);
+
+#endif
+
+main.c
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "linked_list.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main(int argc, char **argv)
+{
+    if (argc == 1) {
+        printf("Not enough arguments");
+        return 9;
+    }
+    struct linked_list_t *ll = ll_create();
+    if (!ll) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    for (int i = 1; i < argc; ++i) {
+        int err = ll_insert_words(ll, 1, *(argv + i));
+        if (err != 1) {
+            printf("Failed to allocate memory");
+            ll_clear(ll);
+            free(ll);
+            return 8;
+        }
+    }
+    ll_display(ll);
+    ll_clear(ll);
+    free(ll);
+    return 0;
+}

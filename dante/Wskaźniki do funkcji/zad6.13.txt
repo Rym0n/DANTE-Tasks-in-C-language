@@ -1,0 +1,160 @@
+Trochę statystyki
+
+functions.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "functions.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+float mean(int* array, int size)
+{
+    if (!array || size <= 0) return -1;
+    float sum = 0;
+    for (int i = 0; i < size; ++i) {
+        sum += *(array+i);
+    }
+    return sum/size;
+}
+float median(int* array, int size)
+{
+    if (!array || size <= 0) return -1;
+    sort(array, size);
+    if (size%2 == 1) return *(array+size/2);
+    else return (*(array+size/2) + *(array+size/2-1)) / 2.0;
+}
+float standard_deviation(int* array, int size)
+{
+    if (!array || size <= 0) return -1;
+    float av = mean(array, size);
+    float sum = 0;
+    for (int i = 0; i < size; ++i) {
+        sum += (*(array+i)-av)*(*(array+i)-av);
+    }
+    return sqrt(sum/size);
+}
+float mode(int* array, int size)
+{
+    if (!array || size <= 0) return -1;
+    sort(array, size);
+    int num = *(array), count = 0, dom_num, dom_count = 0;
+    for (int i = 0; i < size; ++i) {
+        if (*(array+i) == num) count++;
+        else {
+            if (count > dom_count) {
+                dom_num = num;
+                dom_count = count;
+            }
+            num = *(array+i);
+            count = 1;
+        }
+    }
+    if (count > dom_count) {
+        dom_num = num;
+        dom_count = count;
+    }
+    return dom_num;
+}
+int sort(int* array, int size)
+{
+    if (!array || size <= 0) return 0;
+    for (int i = 0; i < size; ++i) {
+        for (int j = 1; j < size; ++j) {
+            if (*(array+j-1) > *(array+j)) {
+                int tmp = *(array+j-1);
+                *(array+j-1) = *(array+j);
+                *(array+j) = tmp;
+            }
+        }
+    }
+    return 1;
+}
+functype find_min(functype *fun, int size, int *array, int array_size)
+{
+    if (!fun || size <= 0 || !array || array_size <= 0) return NULL;
+    float min = (*fun)(array, array_size);
+    int min_func = 0;
+    for (int i = 1; i < size; ++i) {
+        float tmp = (*(fun+i))(array, array_size);
+        if (tmp < min) {
+            min = tmp;
+            min_func = i;
+        }
+    }
+    return *(fun+min_func);
+}
+
+
+functions.h
+
+
+#ifndef FUNCS
+#define FUNCS
+
+float mean(int*, int);
+float median(int*, int);
+float standard_deviation(int*, int);
+float mode(int*, int);
+int sort(int*, int);
+
+typedef float (*functype)(int *, int);
+functype find_min(functype *fun, int size, int *array, int array_size);
+
+#endif
+
+main.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "functions.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    functype *funcs = malloc(sizeof(functype) * 4);
+    if (!funcs) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    *(funcs) = mean;
+    *(funcs+1) = median;
+    *(funcs+2) = standard_deviation;
+    *(funcs+3) = mode;
+    printf("Podaj dlugosc tablicy: ");
+    int size;
+    int err = scanf("%d", &size);
+    if (err != 1) {
+        printf("Incorrect input");
+        free(funcs);
+        return 1;
+    }
+    if (size <= 0) {
+        printf("Incorrect input data");
+        free(funcs);
+        return 2;
+    }
+    int *array = malloc(sizeof(int) * size);
+    if (!array) {
+        printf("Failed to allocate memory");
+        free(funcs);
+        return 8;
+    }
+    printf("Podaj liczby: ");
+    for (int i = 0; i < size; ++i) {
+        err = scanf("%d", array+i);
+        if (err != 1) {
+            printf("Incorrect input");
+            free(funcs);
+            free(array);
+            return 1;
+        }
+    }
+    float x = find_min(funcs, 4, array, size)(array, size);
+    printf("%f", x);
+    free(funcs);
+    free(array);
+    return 0;
+}

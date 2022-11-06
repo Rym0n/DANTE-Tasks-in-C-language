@@ -1,0 +1,186 @@
+
+
+5. Modyfikacja tekstów
+Napisz i przetestuj funkcję text_modifier przetwarzającą tekst na szereg wybranych sposobów i zwracającą tablicę wygenerowanych tekstów (po przetworzeniu) Przykładowe wywołanie funkcji powinno wyglądać następująco:
+
+
+
+functions.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include "functions.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+char* lower_to_upper(const char *in)
+{
+    if (!in) return NULL;
+    char *out = malloc(strlen(in) + 1);
+    if (!out) return NULL;
+    strcpy(out, in);
+    for (int i = 0; *(out + i) != '\0'; ++i) *(out + i) = toupper(*(out + i));
+    return out;
+}
+char* upper_to_lower(const char *in)
+{
+    if (!in) return NULL;
+    char *out = malloc(strlen(in) + 1);
+    if (!out) return NULL;
+    strcpy(out, in);
+    for (int i = 0; *(out + i) != '\0'; ++i) *(out + i) = tolower(*(out + i));
+    return out;
+}
+char* space_to_dash(const char *in)
+{
+    if (!in) return NULL;
+    char *out = malloc(strlen(in) + 1);
+    if (!out) return NULL;
+    strcpy(out, in);
+    for (int i = 0; *(out + i) != '\0'; ++i)
+        if (*(out + i) == ' ') *(out + i) = '_';
+    return out;
+}
+char* reverse_letter(const char *in)
+{
+    if (!in) return NULL;
+    char *out = malloc(strlen(in) + 1);
+    if (!out) return NULL;
+    strcpy(out, in);
+    for (int i = 0; *(out + i) != '\0'; ++i) {
+        if (isupper(*(out + i))) *(out + i) = 'Z' - (*(out + i) - 'A');
+        if (islower(*(out + i))) *(out + i) = 'z' - (*(out + i) - 'a');
+    }
+    return out;
+}
+void free_texts(char **text)
+{
+    if (!text) return;
+    for (int i = 0; *(text + i); ++i) free(*(text + i));
+    free(text);
+}
+char** text_modifier(const char *in, int N, ...)
+{
+    if (!in || N <= 0) return NULL;
+    char **out = calloc(N + 1, sizeof(char*));
+    if (!out) return NULL;
+    va_list v1;
+    va_start(v1, N);
+    for (int i = 0; i < N; ++i) {
+        char *(*func)(const char*) = va_arg(v1, char *(*)(const char*));
+        *(out + i) = func(in);
+        if(!*(out + i)) {
+            free_texts(out);
+            va_end(v1);
+            return NULL;
+        }
+    }
+    va_end(v1);
+    return out;
+}
+
+
+functions.h
+#ifndef FUNC
+#define FUNC
+
+char* lower_to_upper(const char *in);
+char* upper_to_lower(const char *in);
+char* space_to_dash(const char *in);
+char* reverse_letter(const char *in);
+void free_texts(char **);
+char** text_modifier(const char *in, int N, ...);
+
+#endif
+
+main.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "functions.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    char *in = malloc(1001);
+    if (!in) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    char *(**func)(const char*) = malloc(32);
+    if (!func) {
+        printf("Failed to allocate memory");
+        free(in);
+        return 8;
+    }
+    *(func) = lower_to_upper;
+    *(func+1) = upper_to_lower;
+    *(func+2) = reverse_letter;
+    *(func+3) = space_to_dash;
+    int *op = malloc(4 * sizeof(int));
+    if (!op) {
+        printf("Failed to allocate memory");
+        free(in);
+        free(func);
+        return 8;
+    }
+    printf("Podaj tekst do przeksztalcenia: ");
+    scanf("%1000[^\n]s", in);
+    char c;
+    do {c=getchar();} while(c!='\n');
+    printf("Podaj liczbe operacj do przeprowadzenia: ");
+    int N;
+    int err = scanf("%d", &N);
+    if (err != 1) {
+        printf("Incorrect input");
+        free(in);
+        free(func);
+        free(op);
+        return 1;
+    }
+    if (N < 2 || N > 4) {
+        printf("Incorrect input data");
+        free(in);
+        free(func);
+        free(op);
+        return 2;
+    }
+    printf("Podaj wybrane operacje: ");
+    for (int i = 0; i < N; ++i) {
+        err = scanf("%d", op + i);
+        if (err != 1) {
+            printf("Incorrect input");
+            free(in);
+            free(func);
+            free(op);
+            return 1;
+        }
+        if (*(op + i) < 0 || *(op + i) > 3) {
+            printf("Incorrect input data");
+            free(in);
+            free(func);
+            free(op);
+            return 2;
+        }
+    }
+    char **out;
+    if (N == 2) out = text_modifier(in, 2, *(func + *op), *(func + *(op + 1)));
+    if (N == 3) out = text_modifier(in, 3, *(func + *op), *(func + *(op + 1)), *(func + *(op + 2)));
+    if (N == 4) out = text_modifier(in, 4, *(func + *op), *(func + *(op + 1)), *(func + *(op + 2)), *(func + *(op + 3)));
+    if(out==NULL) {
+        printf("Failed to allocate memory");
+        free(in);
+        free(func);
+        free(op);
+        return 8;
+    }
+    for (int i = 0; i < N; ++i) printf("%s\n", *(out+i));
+    free(in);
+    free(func);
+    free(op);
+    free_texts(out);
+    return 0;
+}

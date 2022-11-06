@@ -1,0 +1,301 @@
+Bufor cykliczny
+Napisz program, który pozwoli użytkownikowi na wykonywanie podstawowych operacji na buforze cyklicznym.
+
+W tym celu prygotuj strukturę circular_buffer_t, która będzie działała jak bufor cykliczny (wersja EN). Nowe elementy są dodawane na końcu tablicy i zmieniany jest indeks end, wskazujący pierwszą wolną pozycję. Po pobraniu elementu zmieniany jest indeks begin (w przypadku użycia funkcji pop_front - pobranie z początku bufora) lub end (w przypadku użycia funkcji pop_back - pobranie z końca bufora).
+
+Struktura wspomagająca taką strukturę powinna zostać umieszczona w pliku nagłówkowym circular_buffer.h i wyglądać następująco:
+
+main.c
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "circular_buffer.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int is_invalid(const struct circular_buffer_t *a) {
+    if (a == NULL || a->ptr == NULL || a->capacity <= 0 || a->begin < 0 || a->end < 0 || a->end > a->capacity ||
+        a->begin > a->capacity) {
+        return 1;
+    }
+    return 0;
+}
+
+int circular_buffer_empty(const struct circular_buffer_t *a) {
+    if (is_invalid(a)) {
+        return -1;
+    }
+
+    if (a->begin == a->end) {
+        if (a->full == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int circular_buffer_full(const struct circular_buffer_t *a) {
+    if (is_invalid(a)) {
+        return -1;
+    }
+    if (a->full) {
+        return 1;
+    }
+    return 0;
+}
+
+int circular_buffer_create(struct circular_buffer_t *a, int N) {
+    if (N < 1 || a == NULL) {
+        return 1;
+    }
+
+    int *ptr = malloc(N * sizeof(int));
+    if (ptr == NULL) {
+        return 2;
+    }
+    a->ptr = ptr;
+    a->begin = 0;
+    a->end = 0;
+    a->full = 0;
+    a->capacity = N;
+    return 0;
+}
+
+int circular_buffer_create_struct(struct circular_buffer_t **cb, int N) {
+    if (cb == NULL || N < 1) return 1;
+    *cb = malloc(sizeof(struct circular_buffer_t));
+    if (*cb == NULL) {
+        return 2;
+    }
+    int ret = circular_buffer_create(*cb, N);
+    if (ret != 0) {
+        free(*cb);
+    }
+    return ret;
+}
+
+void circular_buffer_destroy(struct circular_buffer_t *a) {
+    if (a != NULL) {
+        if (a->ptr != NULL) {
+            free(a->ptr);
+        }
+    }
+}
+
+void circular_buffer_destroy_struct(struct circular_buffer_t **a) {
+    if (a != NULL) {
+        circular_buffer_destroy(*a);
+        if (*a != NULL) {
+            free(*a);
+        }
+    }
+}
+
+int circular_buffer_push_back(struct circular_buffer_t *cb, int value) {
+    if (is_invalid(cb)) return 1;
+    if (circular_buffer_full(cb)) {
+        cb->begin += 1;
+        if (cb->begin == cb->capacity) {
+            cb->begin = 0;
+        }
+    }
+    *(cb->ptr + cb->end) = value;
+    cb->end += 1;
+    if (cb->end == cb->capacity) {
+        cb->end = 0;
+    }
+    if (cb->begin == cb->end) {
+        cb->full = 1;
+    }
+    return 0;
+}
+
+int circular_buffer_pop_front(struct circular_buffer_t *a, int *err_code) {
+    if (is_invalid(a)) {
+        if (err_code != NULL) {
+            *err_code = 1;
+        }
+        return 1;
+    }
+    if (circular_buffer_empty(a)) {
+        if (err_code != NULL) {
+            *err_code = 2;
+        }
+        return 0xCAFEBABE;
+    }
+    if (err_code != NULL) {
+        *err_code = 0;
+    }
+    int value = *(a->ptr + a->begin);
+    a->begin += 1;
+    if (a->begin == a->capacity) {
+        a->begin = 0;
+    }
+    a->full = 0;
+    return value;
+}
+
+int circular_buffer_pop_back(struct circular_buffer_t *a, int *err_code) {
+    if (is_invalid(a)) {
+        if (err_code != NULL) {
+            *err_code = 1;
+        }
+        return 1;
+    }
+    if (circular_buffer_empty(a)) {
+        if (err_code != NULL) {
+            *err_code = 2;
+        }
+        return 0xCAFEBABE;
+    }
+    if (err_code != NULL) {
+        *err_code = 0;
+    }
+    a->end -= 1;
+    if (a->end == -1) {
+        a->end = a->capacity - 1;
+    }
+    int value = *(a->ptr + a->end);
+    a->full = 0;
+    return value;
+}
+
+
+void circular_buffer_display(const struct circular_buffer_t *a) {
+    if (is_invalid(a)) {
+        return;
+    }
+    if(circular_buffer_empty(a)){
+        return;
+    }
+    int max_index;
+    if (a->end <= a->begin) {
+        max_index = a->capacity;
+    } else {
+        max_index = a->end;
+    }
+    for (int i = a->begin; i < max_index; i++) {
+        printf("%d, ", *(a->ptr + i));
+    }
+    if (a->end <= a->begin) {
+        for (int i = 0; i < a->end; i++) {
+            printf("%d ", *(a->ptr + i));
+        }
+    }
+    printf("\n");
+}
+
+int main() {
+    printf("Ile ");
+    int capacity;
+    if (scanf("%d", &capacity) != 1) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (capacity < 1) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    struct circular_buffer_t *cb;
+    if (circular_buffer_create_struct(&cb, capacity) != 0) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    int err;
+    int value;
+
+    while (1) {
+        printf("Co robimy ");
+        int choice;
+        if (scanf("%d", &choice) != 1) {
+            printf("Incorrect input");
+            circular_buffer_destroy_struct(&cb);
+            return 1;
+        }
+        switch (choice) {
+            case 0:
+                circular_buffer_destroy_struct(&cb);
+                return 0;
+                break;
+            case 1:
+                printf("Podaj liczbe ");
+                if (scanf("%d", &value) != 1) {
+                    printf("Incorrect input");
+                    circular_buffer_destroy_struct(&cb);
+                    return 1;
+                }
+                circular_buffer_push_back(cb, value);
+                break;
+            case 2:
+                value = circular_buffer_pop_back(cb, &err);
+                if (err == 2) {
+                    printf("Buffer is empty\n");
+                } else {
+                    printf("%d\n", value);
+                }
+                break;
+            case 3:
+                value = circular_buffer_pop_front(cb, &err);
+                if (err == 2) {
+                    printf("Buffer is empty\n");
+                } else {
+                    printf("%d\n", value);
+                }
+                break;
+            case 4:
+                if (circular_buffer_empty(cb)) {
+                    printf("Buffer is empty\n");
+                } else {
+                    circular_buffer_display(cb);
+                }
+                break;
+            case 5:
+                if (circular_buffer_empty(cb)) {
+                    printf("1\n");
+                } else {
+                    printf("0\n");
+                }
+                break;
+            case 6:
+                if (circular_buffer_full(cb)) {
+                    printf("1\n");
+                } else {
+                    printf("0\n");
+                }
+                break;
+            default:
+                printf("Incorrect input data\n");
+                break;
+        }
+    }
+    return 0;
+}
+
+circular_buffer.h
+
+#pragma once
+
+
+struct circular_buffer_t {
+    int *ptr;
+    int begin;
+    int end;
+    int capacity;
+    unsigned char full: 1;
+};
+
+
+int circular_buffer_create(struct circular_buffer_t *a, int N);
+int circular_buffer_create_struct(struct circular_buffer_t **cb, int N);
+
+void circular_buffer_destroy(struct circular_buffer_t *a);
+void circular_buffer_destroy_struct(struct circular_buffer_t **a);
+
+int circular_buffer_push_back(struct circular_buffer_t *cb, int value);
+int circular_buffer_pop_front(struct circular_buffer_t *a, int *err_code);
+int circular_buffer_pop_back(struct circular_buffer_t *a, int *err_code);
+
+int circular_buffer_empty(const struct circular_buffer_t *a);
+int circular_buffer_full(const struct circular_buffer_t *a);
+
+void circular_buffer_display(const struct circular_buffer_t *a);

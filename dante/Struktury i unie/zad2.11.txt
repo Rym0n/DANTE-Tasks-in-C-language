@@ -1,0 +1,112 @@
+I w strukturze plik być może
+
+
+Napisz program, który pobierze od użytkownika listę plików tekstowych a następnie będzie pobierał kolejne teksty i dodawał je do tego pliku, w którym aktualnie znajduje się najmniej danych.
+
+
+#include <stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+struct file_t
+{
+    FILE *f;
+    int size;
+};
+
+
+int file_size_from_file(FILE *f){
+    if(f==NULL){
+        return -2;
+    }
+    int x;
+    int i;
+    i=ftell(f);
+    fseek(f,0,SEEK_END);
+    x=ftell(f);
+    fseek(f,i,SEEK_SET);
+    return x;
+}
+
+
+int open_file(struct file_t* f, const char *filename) {
+    if (f == NULL || filename == NULL)
+        return 1;
+    f->f = fopen(filename, "a");
+    if (f->f == NULL)
+        return 2;
+    f->size = file_size_from_file(f->f);
+    return 0;
+}
+
+
+void close_file(struct file_t* f) {
+    if (f == NULL || f->f == NULL)
+        return;
+    fclose(f->f);
+}
+
+
+struct file_t* find_min(const struct file_t* files, int size) {
+    if (files == NULL || size < 1)
+        return NULL;
+    int min_index = 0;
+    int min_file_size = (files + 0)->size;
+    for (int i = 1; i < size; ++i) {
+        if ((files + i)->size < min_file_size) {
+            min_index = i;
+            min_file_size = (files + i)->size;
+        }
+    }
+    return (struct file_t *)(files + min_index);
+}
+
+
+void get_line(char *str, int size) {
+    char c;
+    for (int i = 0; i < size; ++i) {
+        c = getchar();
+        if (c == '\n') {
+            *(str + i) = '\0';
+            return;
+        } else if (i + 1 == size) {
+            i--;
+        } else {
+            *(str + i) = c;
+        }
+    }
+}
+
+
+int main() {
+    char str[1000];
+    struct file_t files[5];
+    int saved_files = 0;
+    printf("Podaj pliki:\n");
+    while (1) {
+        get_line(str, 1000);
+        if (*str == '\0')
+            break;
+        if (saved_files < 5 && open_file(files + saved_files, str) == 0) {
+            saved_files++;
+        }
+    }
+    if (saved_files == 0) {
+        printf("couldn't open file");
+        return 4;
+    }
+    printf("Podaj teksty:\n");
+    struct file_t *file;
+    while (1) {
+        get_line(str, 1000);
+        if (*str == '\0')
+            break;
+        file = find_min(files, saved_files);
+        fprintf(file->f, "%s\n", str);
+        file->size = file_size_from_file(file->f);
+    }
+    for (int i = 0; i < saved_files; ++i)
+        close_file(files + i);
+    printf("Files saved");
+    return 0;
+}

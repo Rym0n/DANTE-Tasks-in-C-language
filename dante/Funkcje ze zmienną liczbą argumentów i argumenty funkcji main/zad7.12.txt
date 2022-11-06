@@ -1,0 +1,25 @@
+Suma argumentów
+
+Napisz program do obliczania sumy liczb całkowitych przekazanych w argumentach funkcji main.
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv)
+{
+    if (argc == 1) {
+        printf("Not enough arguments");
+        return 9;
+    }
+    int sum = 0;
+    for (int i = 1; i < argc; ++i) {
+        char *endptr;
+        sum += (int)strtol(*(argv + i), &endptr, 10);
+        if (*endptr) {
+            printf("Incorrect input");
+            return 1;
+        }
+    }
+    printf("%d", sum);
+    return 0;
+}

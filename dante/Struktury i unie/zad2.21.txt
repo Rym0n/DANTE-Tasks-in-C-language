@@ -1,0 +1,215 @@
+Samoloty 
+
+
+"flights.c"
+
+#include <stdio.h>
+#include "flights.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int save_flights(const struct flight *flights, int size, const char *filename) {
+    if (!flights || size < 1 || !filename)
+        return 1;
+    FILE *f = fopen(filename, "w");
+    if (f == NULL)  return 2;
+    fwrite(&size, sizeof(int), 1, f);
+    for (int i = 0; i < size; ++i) {
+        fwrite(flights + i, sizeof(struct flight), 1, f);
+    }
+    fclose(f);
+    return 0;
+}
+
+
+int load_flights(struct flight *flights, int size, const char *filename) {
+    if (!flights || size < 1 || !filename)
+        return -1;
+    FILE *f = fopen(filename, "r");
+    if (f == NULL)  return -2;
+    int int_size;
+    if (fread(&int_size, sizeof(int), 1, f) < 1 || int_size < 1) {
+        fclose(f);
+        return -3;
+    }
+    if (int_size < size)
+        size = int_size;
+    for (int i = 0; i < size; ++i) {
+        if (fread(flights + i, sizeof(struct flight), 1, f) < 1) {
+            fclose(f);
+            return -3;
+        }
+    }
+    fclose(f);
+    return size;
+}
+
+
+int statistics_flight(const struct flight *flights, int size, struct flight *f, enum flight_t type) {
+    if (!flights || size < 1 || !f || (type != PASSENGER && type != CARGO))
+        return -1;
+    int type_size = 0;
+    if (type == PASSENGER)
+        f->npassengers = 0;
+    else
+        f->tonnages = 0;
+    for (int i = 0; i < size; ++i) {
+        if ((flights + i)->type == type) {
+            ++type_size;
+            if (type == PASSENGER)
+                f->npassengers += (flights + i)->npassengers;
+            else
+                f->tonnages += (flights + i)->tonnages;
+        }
+    }
+    f->flight_number = type_size;
+    f->type = type;
+    return type_size;
+}
+
+
+int best_flight(const struct flight *flights, int size, struct flight *f, enum flight_t type) {
+    if (!flights || size < 1 || !f || (type != PASSENGER && type != CARGO))
+        return 1;
+    int type_size = 0;
+    f->type = type;
+    f->flight_number = 0;
+    if (type == PASSENGER)
+        f->npassengers = 0;
+    else
+        f->tonnages = 0;
+    for (int i = 0; i < size; ++i) {
+        if ((flights + i)->type == type) {
+            if (type == PASSENGER) {
+                if ((flights + i)->npassengers > f->npassengers || (((flights + i)->npassengers == f->npassengers) && (flights + i)->flight_number > f->flight_number)) {
+                    *f = *(flights + i);
+                }
+            }
+            else if (type == CARGO) {
+                if ((flights + i)->tonnages > f->tonnages || (((flights + i)->tonnages == f->tonnages) && (flights + i)->flight_number > f->flight_number)) {
+                    *f = *(flights + i);
+                }
+            }
+            ++type_size;
+        }
+    }
+    if (type_size == 0)
+        return 2;
+    return 0;
+}
+
+
+
+
+
+"flights.h"
+
+
+#pragma once
+
+
+enum flight_t {
+    PASSENGER,
+    CARGO
+};
+
+
+struct flight {
+    int flight_number;
+    enum flight_t type;
+    union {
+        unsigned short npassengers;
+        double tonnages;
+    };
+};
+
+
+int save_flights(const struct flight *flights, int size, const char *filename);
+int load_flights(struct flight *flights, int size, const char *filename);
+int statistics_flight(const struct flight *flights, int size, struct flight *f, enum flight_t type);
+int best_flight(const struct flight *flights, int size, struct flight *f, enum flight_t type);
+
+
+
+
+
+
+samoloty.c
+
+#include <stdio.h>
+#include "flights.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+void get_line(char *str, int size) {
+    char c;
+    for (int i = 0; i < size; ++i) {
+        c = getchar();
+        if (c == '\n') {
+            *(str + i) = '\0';
+            return;
+        } else if (i + 1 == size) {
+            i--;
+        } else {
+            *(str + i) = c;
+        }
+    }
+}
+
+
+int main() {
+    printf("Podaj plik: ");
+    char filename[40];
+    struct flight flights[100];
+    get_line(filename, 40);
+    int x = load_flights(flights, 100, filename);
+    if (x == -2) {
+        printf("Couldn't open file");
+        return 4;
+    }
+    else if (x == -3) {
+        printf("File corrupted");
+        return 6;
+    }
+    if (x == 0) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    int size = x;
+    struct flight sum_passengers, sum_cargo, best_passengers, best_cargo;
+    int sum_passengers_size, sum_cargo_size, best_passengers_size, best_cargo_size;
+
+    sum_passengers_size = statistics_flight(flights, size, &sum_passengers, PASSENGER);
+
+    sum_cargo_size = statistics_flight(flights, size, &sum_cargo, CARGO);
+
+    best_passengers_size =! best_flight(flights, size, &best_passengers, PASSENGER);
+
+    best_cargo_size =! best_flight(flights, size, &best_cargo, CARGO);
+    struct flight tab[4];
+    int i = 0;
+    if (sum_passengers_size > 0)
+        *(tab + i++) = sum_passengers;
+    if (sum_cargo_size > 0)
+        *(tab + i++) = sum_cargo;
+    if (best_passengers_size > 0)
+        *(tab + i++) = best_passengers;
+    if (best_cargo_size > 0)
+        *(tab + i++) = best_cargo;
+    if (i == 0) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    x = save_flights(tab, i, filename);
+    if (x == 0) {
+        printf("File saved");
+        return 0;
+    }
+    else if (x == 2) {
+        printf("Couldn't create file");
+        return 5;
+    }
+    return 0;
+}
+
+

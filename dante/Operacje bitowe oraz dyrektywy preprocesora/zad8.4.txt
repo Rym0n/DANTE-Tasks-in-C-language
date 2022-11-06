@@ -1,0 +1,25 @@
+Postać bitowa
+
+
+#include <stdio.h>
+#include <stdint.h>
+
+int main()
+{
+    printf("Podaj liczbe 64 bitowa: ");
+    int64_t x;
+    int err = scanf("%ld", &x);
+    if (err != 1) {
+        printf("Incorrect input");
+        return 1;
+    }
+    int64_t bit = (int64_t)1 << 63;
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            printf("%d", !!(x & bit));
+            x = x << 1;
+        }
+        printf(" ");
+    }
+    return 0;
+}

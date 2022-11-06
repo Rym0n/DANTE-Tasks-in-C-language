@@ -1,0 +1,110 @@
+Modyfikacja tekstów
+Napisz funkcję, która przetwarza znaki w tekście za pomocą funkcji podanej przez wskaźnik. Wskaźnik ma być zbudowany w oparciu o następujący prototyp:
+
+
+char_operations.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include "char_operations.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+char lower_to_upper(char ch)
+{
+    return (char)toupper(ch);
+}
+char upper_to_lower(char ch)
+{
+    return (char)tolower(ch);
+}
+char space_to_dash(char ch)
+{
+    if (ch == ' ') return '_';
+    return ch;
+}
+char reverse_letter(char ch)
+{
+    if (islower(ch)) return 'z' - (ch - 'a');
+    if (isupper(ch)) return 'Z' - (ch - 'A');
+    return ch;
+}
+char* letter_modifier(const char *input, char(*func)(char))
+{
+    if (!input || !func) return NULL;
+    char *output = malloc(strlen(input)+1);
+    if (!output) return NULL;
+    for (int i = 0; ; ++i) {
+        *(output+i) = func(*(input+i));
+        if (*(input+i) == '\0') break;
+    }
+    return output;
+}
+
+char_operations.h
+
+#ifndef CHAR
+#define CHAR
+
+char lower_to_upper(char ch);
+char upper_to_lower(char ch);
+char space_to_dash(char ch);
+char reverse_letter(char ch);
+char* letter_modifier(const char *input, char(*func)(char));
+
+#endif
+
+
+main.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "char_operations.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    char (*func[4])(char);
+    *(func) = lower_to_upper;
+    *(func+1) = upper_to_lower;
+    *(func+2) = space_to_dash;
+    *(func+3) = reverse_letter;
+    char *input = malloc(1001);
+    int op;
+    if (!input) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    printf("podaj tekst: ");
+    scanf("%1000[^\n]s", input);
+    do {op = getchar();} while (op != '\n');
+    printf("Podaj rodzaj operacji: ");
+    int err = scanf("%d", &op);
+    if (err != 1) {
+        printf("Incorrect input");
+        free(input);
+        return 1;
+    }
+    if (op < 0 || op > 3) {
+        printf("Incorrect input data");
+        free(input);
+        return 2;
+    }
+    char *output;
+    if (op == 0) output = letter_modifier(input, lower_to_upper);
+    else if (op == 1) output = letter_modifier(input, upper_to_lower);
+    else if (op == 2) output = letter_modifier(input, space_to_dash);
+    else output = letter_modifier(input, reverse_letter);
+    if (!output) {
+        printf("Failed to allocate memory");
+        free(input);
+        return 8;
+    }
+    printf("%s", output);
+    free(input);
+    free(output);
+    return 0;
+}

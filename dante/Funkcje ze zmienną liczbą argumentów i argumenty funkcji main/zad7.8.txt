@@ -1,0 +1,70 @@
+ 	
+Bity
+Napisz i przetestuj funkcję obliczającą wartość dziesiętną z liczby przekazanej w postaci bitowej, gdzie każdy bit jest osobnym parametrem funkcji.
+
+Funkcja ma przyjmować
+
+wskaźnik na zmienną, do której ma zostać zapisany kod błędu,
+liczbę bitów do scalenia
+oraz wartości poszczególnych bitów.
+
+
+
+function.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include "function.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+uint64_t bits_to_number(int *err_code, int N, ...)
+{
+    if (N <= 0 || N > 64) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+    if (err_code) *err_code = 0;
+    va_list arg;
+    va_start(arg, N);
+    uint64_t num = 0;
+    for (int i = 0; i < N; ++i) {
+        num *= 2;
+    int n = va_arg(arg, int);
+    if (n != 0 && n != 1) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+        if (n == 1) num += 1;
+    }
+    va_end(arg);
+    return num;
+}
+
+
+function.h
+
+#ifndef FUNC
+#define FUNC
+
+#include <stdint.h>
+
+uint64_t bits_to_number(int *err_code, int N, ...);
+
+#endif
+
+main.c
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "function.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    printf("%lu\n%lu\n%lu", bits_to_number(NULL, 3, 1, 1, 1), bits_to_number(NULL, 8, 1, 0, 0, 0, 0, 0, 0, 1), bits_to_number(NULL, 32, 1,1,0,1,0,0,0,1, 0,0,0,0,1,1,0,1, 0,1,0,0,1,0,1,1, 1,1,1,0,1,1,1,0));
+    return 0;
+}

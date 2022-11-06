@@ -1,0 +1,114 @@
+Analizator plików
+
+Napisz i przetestuj funkcję sprawdzającą istnienie i rozmiar plików przekazanych w parametrach funkcji. Funkcja ma przyjmować liczbę plików do sprawdzenia oraz nazwy poszczególnych plików.
+
+
+
+'file_stats.h'
+
+#ifndef STATS
+#define STATS
+
+enum file_state_t
+{
+    EXIST,
+    NON_EXIST
+};
+struct file_stats_t
+{
+    char *filename;
+    int size;
+    enum file_state_t state;
+};
+
+#endif
+
+main.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "file_stats.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+struct file_stats_t* check_files(int N, ...);
+int main()
+{
+    char **filenames = malloc(4 * sizeof(char*));
+    if (!filenames) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    for (int i = 0; i < 4; ++i) {
+        *(filenames+i) = calloc(30, sizeof(char));
+        if (!*(filenames+i)) {
+            for (int j = 0; j < i; ++j) free(*(filenames+j));
+            free(filenames);
+            printf("Failed to allocate memory");
+            return 8;
+        }
+    }
+    printf("Enter number of files: ");
+    int x;
+    int err = scanf("%d", &x);
+    if (err != 1) {
+        for (int i = 0; i < 4; ++i) free(*(filenames+i));
+        free(filenames);
+        printf("Incorrect input");
+        return 1;
+    }
+    if (x < 2 || x > 4) {
+        for (int i = 0; i < 4; ++i) free(*(filenames+i));
+        free(filenames);
+        printf("Incorrect input data");
+        return 2;
+    }
+    printf("Enter file names:\n");
+    for (int i = 0; i < x; ++i) {
+        getchar();
+        scanf("%29[^\n]s", *(filenames+i));
+    }
+    struct file_stats_t *stats;
+    if (x == 2) stats = check_files(2, *filenames, *(filenames+1));
+    if (x == 3) stats = check_files(3, *filenames, *(filenames+1), *(filenames+2));
+    if (x == 4) stats = check_files(4, *filenames, *(filenames+1), *(filenames+2), *(filenames+3));
+    if (!stats) {
+        for (int i = 0; i < 4; ++i) free(*(filenames+i));
+        free(filenames);
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    for (int i = 0; i < x; ++i) {
+        if ((stats+i)->state == NON_EXIST) printf("File: %s not exists\n", (stats+i)->filename);
+        else printf("File: %s; size: %d\n", (stats+i)->filename, (stats+i)->size);
+    }
+    for (int i = 0; i < 4; ++i) free(*(filenames+i));
+    free(filenames);
+    free(stats);
+    return 0;
+}
+struct file_stats_t* check_files(int N, ...)
+{
+    if (N <= 0) return NULL;
+    struct file_stats_t *stats = malloc(N * sizeof(struct file_stats_t));
+    if (!stats) return NULL;
+    va_list v1;
+    va_start(v1, N);
+    for (int i = 0; i < N; ++i) {
+        (stats+i)->filename = va_arg(v1, char*);
+        FILE *f = fopen((stats+i)->filename, "r");
+        if (!f) {
+            (stats+i)->size = 0;
+            (stats+i)->state = NON_EXIST;
+        }
+        else {
+            fseek(f, 0, SEEK_END);
+            (stats+i)->size = (int)ftell(f);
+            (stats+i)->state = EXIST;
+            fclose(f);
+        }
+    }
+    va_end(v1);
+    return stats;
+}

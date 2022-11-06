@@ -1,0 +1,245 @@
+11. Flexible Array
+
+main.c
+
+#include <stdio.h>
+#include "array.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+void wyswietl(struct array_t *tab) {
+    if (tab->size == 0) {
+        printf("Buffer is empty");
+    } else {
+        array_display(tab);
+    }
+    printf("\n");
+}
+
+int main() {
+    struct array_t *tab;
+    int N, res;
+    printf("Podaj rozmiar tablicy:");
+    res = scanf("%d", &N);
+    if (res == 0) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (N < 1) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    res = array_create_struct(&tab, N);
+    if (res > 0) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+
+    while (1) {
+        printf("Co chcesz zrobic: ");
+        int choice;
+        if (scanf("%d", &choice) != 1) {
+            printf("Incorrect input");
+            array_destroy_struct(&tab);
+            return 1;
+        }
+        int i;
+        switch (choice) {
+            case 0:
+                array_destroy_struct(&tab);
+                return 0;
+                break;
+            case 1:
+                printf("Podaj liczby do dodania: ");
+                while (1) {
+                    if (scanf("%d", &i) != 1) {
+                        printf("Incorrect input");
+                        array_destroy_struct(&tab);
+                        return 1;
+                    }
+                    if (i == 0) {
+                        wyswietl(tab);
+                        break;
+                    }
+                    if (array_push_back(tab, i) != 0) {
+                        printf("Failed to allocate memory\n");
+                        wyswietl(tab);
+                        break;
+                    }
+                }
+                break;
+            case 2:
+                printf("Podaj liczby do zabrania: ");
+                while (1) {
+                    if (scanf("%d", &i) != 1) {
+                        printf("Incorrect input");
+                        array_destroy_struct(&tab);
+                        return 1;
+                    }
+                    if (i == 0) {
+                        break;
+                    }
+                    array_remove_item(tab, i);
+                }
+                wyswietl(tab);
+                break;
+            default:
+                printf("Incorrect input data\n");
+                break;
+        }
+    }
+
+    return 0;
+}
+
+
+array.h
+#ifndef ARRAY_H_INCLUDED
+#define ARRAY_H_INCLUDED
+
+struct array_t{
+    int *ptr;
+    int size;
+    int capacity;
+};
+int array_create(struct array_t *a, int N);
+int array_push_back(struct array_t *a, int value);
+void array_display(const struct array_t *a);
+void array_destroy(struct array_t *a);
+int array_create_struct(struct array_t **a, int N);
+void array_destroy_struct(struct array_t **a);
+int array_remove_item(struct array_t *a, int value);
+#endif
+
+
+array.c
+#include "array.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int is_invalid(const struct array_t *a) {
+    if (a == NULL)
+        return 1;
+    if (a->size < 0)
+        return 1;
+    if (a->ptr == NULL)
+        return 1;
+    if (a->capacity < 1)
+        return 1;
+    if (a->size > a->capacity)
+        return 1;
+    return 0;
+}
+
+int array_create(struct array_t *a, int N) {
+    if (a == NULL || N <= 0)
+        return 1;
+    int *parray = malloc(sizeof(int) * N);
+    if (parray == NULL)
+        return 2;
+    a->capacity = N;
+    a->size = 0;
+    a->ptr = parray;
+    return 0;
+}
+
+int array_push_back(struct array_t *a, int value) {
+    if (is_invalid(a)) {
+        return 1;
+    }
+    if (a->size == a->capacity) {
+        int *new_ptr = realloc(a->ptr, (a->capacity * 2) * sizeof(int));
+        if (new_ptr == NULL) {
+            return 2;
+        }
+        a->ptr = new_ptr;
+        a->capacity *= 2;
+    }
+
+    *(a->ptr + a->size) = value;
+    a->size = a->size + 1;
+    return 0;
+}
+
+void array_display(const struct array_t *a) {
+    if (is_invalid(a)) {
+        return;
+    }
+    int i = 0;
+    while (i < (a->size)) {
+        printf("%d ", *(a->ptr + i));
+        i++;
+    }
+}
+
+
+void array_destroy(struct array_t *a) {
+    if (a == NULL) {
+        return;
+    }
+    if (a->ptr != NULL) {
+        free(a->ptr);
+    }
+}
+
+int array_create_struct(struct array_t **a, int N) {
+    if (N <= 0 || a == NULL) {
+        return 1;
+    }
+
+    *a = malloc(sizeof(struct array_t));
+    if (*a == NULL)
+        return 2;
+    int tab;
+    tab = array_create(*a, N);
+    if (tab == 2) {
+        free(*a);
+        return 2;
+    }
+    return 0;
+}
+
+void array_destroy_struct(struct array_t **a) {
+    if (a == NULL) {
+        return;
+    }
+    array_destroy(*a);
+    if (*a != NULL) {
+        free(*a);
+    }
+}
+
+int item_remover(struct array_t *a, int value) {
+    for (int i = 0; i < a->size; i++) {
+        if (*(a->ptr + i) == value) {
+            for (int j = i + 1; j < a->size; j++) {
+                *(a->ptr + j - 1) = *(a->ptr + j);
+            }
+            a->size -= 1;
+            return 1 + item_remover(a, value);
+        }
+    }
+    return 0;
+}
+
+int array_remove_item(struct array_t *a, int value) {
+    if (is_invalid(a)) {
+        return -1;
+    }
+
+    int removed = item_remover(a, value);
+
+    if (a->size < a->capacity / 4) {
+        a->capacity /= 2;
+        int *new_ptr = realloc(a->ptr, sizeof(int) * a->capacity);
+        if (new_ptr == NULL) {
+            printf("????");
+            return 313;
+        }
+        a->ptr = new_ptr;
+    }
+    return removed;
+}

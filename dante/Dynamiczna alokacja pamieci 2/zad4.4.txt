@@ -1,0 +1,109 @@
+ Macierz
+Przygotuj program do alokacji, wprowadzania i wyświetlania macierzy w konsoli.
+
+W tym celu przygotuj przygotuj strukturę do przechowywania macierzy 2D o następującej postaci:
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+struct matrix_t {
+    int **ptr;
+    int width;
+    int height;
+};
+
+void matrix_destroy(struct matrix_t *m) {
+    if (m == NULL) {
+        return;
+    }
+    int **ptr = m->ptr;
+    if (ptr != NULL) {
+        int i;
+        for (i = 0; i < m->height; i++) {
+            free(*(ptr + i));
+        }
+        free(ptr);
+    }
+}
+
+int matrix_create(struct matrix_t *m, int width, int height) {
+    if (m == NULL || width < 1 || height < 1) {
+        return 1;
+    }
+    m->ptr = malloc(sizeof(int *) * height);
+    if (m->ptr == NULL) {
+        return 2;
+    }
+    int i;
+    for (i = 0; i < height; i++) {
+        *(m->ptr + i) = malloc(sizeof(int) * width);
+        if (*(m->ptr + i) == NULL) {
+            m->height = i;
+            matrix_destroy(m);
+            return 2;
+        }
+    }
+    m->height = height;
+    m->width = width;
+    return 0;
+}
+
+int matrix_read(struct matrix_t *m) {
+    if (m == NULL || m->ptr == NULL || m->height < 1 || m->width < 1) {
+        return 1;
+    }
+    int i, j;
+    for (i = 0; i < m->height; i++) {
+        for (j = 0; j < m->width; j++) {
+            if (scanf("%d", (*(m->ptr + i) + j)) != 1) {
+                return 2;
+            }
+        }
+    }
+    return 0;
+}
+
+void matrix_display(const struct matrix_t *m) {
+    if (m == NULL || m->ptr == NULL || m->height < 1 || m->width < 1) {
+        return;
+    }
+    int i, j;
+    for (i = 0; i < m->height; i++) {
+        for (j = 0; j < m->width; j++) {
+            printf("%d ", *(*(m->ptr + i) + j));
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    struct matrix_t m;
+    int height, width;
+    printf("Podaj: ");
+    if (scanf("%d %d", &width, &height) != 2) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (width < 1 || height < 1) {
+        printf("incorrect input data");
+        return 2;
+    }
+    int err = matrix_create(&m, width, height);
+    if (err == 2) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    printf("Podaj liczby: ");
+    if (matrix_read(&m) != 0) {
+        printf("incorrect input");
+        matrix_destroy(&m);
+        return 1;
+    }
+    matrix_display(&m);
+    matrix_destroy(&m);
+    return 0;
+}

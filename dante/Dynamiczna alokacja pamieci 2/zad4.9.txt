@@ -1,0 +1,453 @@
+Obraz w obrazie
+
+Rozbuduj program z zadania 4.8 Rysujemy prostokąt o funkcję do rysowania obrazu w obrazie. Prototyp takiej funkcji powinien wyglądać następująco:
+
+
+main.c
+
+#include "image_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int main() {
+    char * txt = (char*)calloc(40, sizeof(char));
+    if(!txt)
+        return printf("Failed to allocate memory"), 8;
+
+    printf("Podaj nazwe: ");
+
+    fgets(txt,40,stdin);
+    if(strlen(txt)>39) while(getchar()!='\n');
+    if(*(txt+strlen(txt)-1)=='\n') *(txt+strlen(txt)-1)='\0';
+
+    int er = 0;
+    struct image_t * wsk = load_image_t(txt, &er);
+    if(er==2)
+        return printf("Couldn't open file"), free(txt), 4;
+    else if(er==3)
+        return printf("File corrupted"), free(txt), 6;
+    else if(er==4)
+        return printf("Failed to allocate memory"), free(txt), 8;
+
+    int count=0;
+    printf("Podaj liczbe obrazow: ");
+    if(scanf("%d", &count)!=1)
+        return printf("Incorrect input"), free(txt), destroy_image(&wsk), 1;
+
+    if(count < 1)
+        return printf("Incorrect input data"), free(txt), destroy_image(&wsk), 2;
+
+    char * txt1 = (char*)calloc(40, sizeof(char));
+    if(!txt1)
+        return printf("Failed to allocate memory"), free(txt), destroy_image(&wsk), 8;
+
+    int destx, desty;
+
+    for(int i = 0 ; i < count ; i++){
+        printf("Podaj nazwe pliku: ");
+        setbuf(stdin, 0);
+        fgets(txt1,40,stdin);
+        if(strlen(txt1)>39) while(getchar()!='\n');
+        if(*(txt1+strlen(txt1)-1)=='\n') *(txt1+strlen(txt1)-1)='\0';
+
+        struct image_t * wsk1 = load_image_t(txt1, &er);
+        if(er==2) {
+            printf("Couldn't open file\n");
+            continue;
+        }
+        else if(er==3) {
+            printf("File corrupted\n");
+            continue;
+        }
+        else if(er==4)
+            return printf("Failed to allocate memory"), free(txt), destroy_image(&wsk),free(txt1), destroy_image(&wsk1), 8;
+
+        printf("Podaj współrzędne: ");
+        setbuf(stdin, 0);
+        if(scanf("%d %d", &destx, &desty)!=2){
+            return printf("Incorrect input"), free(txt), destroy_image(&wsk),free(txt1), destroy_image(&wsk1),1;
+        }
+        er=draw_image(wsk, wsk1, destx, desty);
+        if(er!=0){
+            printf("Incorrect input data\n");
+        }
+        destroy_image(&wsk1);
+    }
+
+    unsigned int whereDot = 0;
+    for(unsigned int i = 0 ; i <= strlen(txt) ; i++){
+        if(*(txt+i)=='.')
+            whereDot = i;
+    }
+    char * afterDot = (char*)calloc(strlen(txt)-whereDot+1, sizeof(char));
+    strcpy(afterDot, txt+whereDot);
+    strcpy(txt+whereDot, "_modified");
+    strcpy(txt+whereDot+9, afterDot);
+
+    er = save_image_t(txt, wsk);
+    if(er!=0){
+        free(afterDot);
+        return printf("Couldn't create file"), free(txt), free(txt1), destroy_image(&wsk), 5;
+    }
+
+    printf("File saved");
+    free(txt);
+    free(txt1);
+    free(afterDot);
+    destroy_image(&wsk);
+}
+
+image_utils.h
+
+#ifndef PROJECT1_IMAGE_UTILS_H
+#define PROJECT1_IMAGE_UTILS_H
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+struct image_t {
+    char type[3];
+    int **ptr;
+    int width;
+    int height;
+};
+
+struct point_t {
+    int x;
+    int y;
+};
+
+struct rectangle_t{
+    struct point_t p;
+    int width;
+    int height;
+};
+
+struct image_t* load_image_t(const char *filename, int *err_code);
+int save_image_t(const char * filename, const struct image_t *m1);
+
+void destroy_image(struct image_t **m);
+struct image_t* image_flip_horizontal(const struct image_t *m1);
+struct image_t* image_flip_vertical(const struct image_t *m1);
+struct image_t* image_negate(const struct image_t *m1);
+
+
+const int* image_get_pixel(const struct image_t *img, int x, int y);
+int* image_set_pixel(struct image_t *img, int x, int y);
+int image_draw_rectangle(struct image_t *img, const struct rectangle_t *rect, int value);
+
+int draw_image(struct image_t *img, const struct image_t *src, int destx, int desty);
+#endif //PROJECT1_IMAGE_UTILS_H
+
+
+
+image_utils.c
+
+
+#include "image_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+
+int draw_image(struct image_t *img, const struct image_t *src, int destx, int desty){
+    if(img==NULL || img->ptr==NULL || src==NULL || src->ptr==NULL || img->width < 1 || img->height<1 || src->height<1 || src->width<1 || destx+src->width > img->width || desty+src->height > img->height || destx <0 || desty <0)
+        return 1;
+
+    for(int i = desty, k=0 ; i < src->height + desty; i++, k++){
+        for(int j = destx, l=0 ; j < src->width + destx; j++, l++){
+            *(*(img->ptr+i)+j) = *(*(src->ptr+k)+l);
+        }
+    }
+
+    return 0;
+}
+
+
+
+const int* image_get_pixel(const struct image_t *img, int x, int y){
+    if(img==NULL || img->ptr==NULL || img->width< 1 || img->height < 1 || x<0 || y<0 || x>=img->width || y>=img->height)
+        return NULL;
+    return (*(img->ptr+y)+x);
+}
+
+int* image_set_pixel(struct image_t *img, int x, int y){
+    if(img==NULL || img->ptr==NULL || img->width < 1 || img->height < 1 || x< 0 || y< 0 || x>=img->width || y>=img->height)
+        return NULL;
+    return (*(img->ptr+y)+x);
+}
+
+int image_draw_rectangle(struct image_t *img, const struct rectangle_t *rect, int value){
+    if(img==NULL || img->ptr==NULL || rect==NULL  ||img->height < 1 || img->width < 1 || rect->height < 1 || rect->width<1 || rect->p.x<0 || rect->p.y<0 ||value < 0 || value > 255 || (rect->width+rect->p.x > img->width) || (rect->height+rect->p.y > img->height))
+        return 1;
+
+    for(int i = rect->p.y ; i < rect->height+ rect->p.y ; i++){
+        for(int j = rect->p.x ; j < rect->width + rect->p.x ; j++){
+            if(i == rect->p.y || i == (rect->height+ rect->p.y-1) || (j==rect->p.x || (j==rect->width + rect->p.x-1)))
+                *(*(img->ptr+i)+j)= value;
+        }
+    }
+    return 0;
+}
+
+
+
+
+int save_image_t(const char * filename, const struct image_t *m1){
+    if(filename==NULL || m1==NULL || m1->ptr==NULL || m1->height<1 || m1->width<1)
+        return 1;
+
+    FILE * f = fopen(filename, "w");
+    if(f==NULL)
+        return 2;
+
+    if(fprintf(f,"%s\n",m1->type)<=0)
+        return fclose(f), 3;
+    if(fprintf(f,"%d %d\n", m1->width,m1->height)<=0)
+        return fclose(f), 3;
+    if(fprintf(f,"255\n")<=0)
+        return fclose(f), 3;
+
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            if(fprintf(f, "%d ", *(*(m1->ptr+i)+j))<=0)
+                return fclose(f), 3;
+        }
+        if(fprintf(f, "\n")<=0)
+            return fclose(f), 3;
+    }
+    fclose(f);
+    return 0;
+}
+
+
+void destroy_image(struct image_t **m){
+    if(!m)
+        return;
+    for(int i = 0 ; i< (*m)->height ; i++){
+        free(*((*m)->ptr+i));
+    }
+
+    free((*m)->ptr);
+    free((*m));
+    *m=NULL;
+}
+
+struct image_t* load_image_t(const char *filename, int *err_code){
+    if(err_code)
+        *err_code=0;
+    if(filename==NULL){
+        if(err_code)
+            *err_code=1;
+        return NULL;
+    }
+
+    FILE * f = fopen(filename, "r");
+    if(!f){
+        if(err_code)
+            *err_code = 2;
+        return NULL;
+    }
+
+    struct image_t *res = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(res==NULL){
+        if(err_code)
+            *err_code = 4;
+        fclose(f);
+        return NULL;
+    }
+
+
+    if(fread(res->type,sizeof(char),2,f)<=0){
+        if(err_code){
+            *err_code=3;
+        }
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+    *(res->type+2)='\0';
+
+    if(strcmp(res->type,"P2")!=0){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    if(fscanf(f, "%d %d", &(res->width), &(res->height))!=2){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    if(res->width<1 || res->height<1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    res->ptr = (int**)calloc(res->height, sizeof(int*));
+    if(!res->ptr){
+        if(err_code)
+            *err_code = 4;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < res->height ; i++){
+        *(res->ptr+i)=(int*)calloc(res->width, sizeof(int));
+        if(*(res->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ; j--){
+                free(*(res->ptr+j));
+            }
+            if(err_code)
+                *err_code = 4;
+            fclose(f);
+            free(res->ptr);
+            free(res);
+            return NULL;
+        }
+    }
+
+    int a = 0;
+    if(fscanf(f, "%d", &a)!=1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        destroy_image(&res);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < res->height ; i++){
+        for(int j = 0 ; j < res->width ; j++){
+            if(fscanf(f, "%d",&a)!=1){
+                if(err_code)
+                    *err_code = 3;
+                fclose(f);
+                destroy_image(&res);
+                return NULL;
+            }
+            if(a>255 || a <0){
+                if(err_code)
+                    *err_code = 3;
+                fclose(f);
+                destroy_image(&res);
+                return NULL;
+            }
+            *(*(res->ptr+i)+j) = a;
+        }
+    }
+    fclose(f);
+    return res;
+}
+
+struct image_t* image_flip_horizontal(const struct image_t *m1){
+    if(m1==NULL || m1->width < 1 || m1->height < 1 || strcmp(m1->type,"P2") || m1->ptr==NULL)
+        return NULL;
+
+    struct image_t * result = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(result==NULL)
+        return NULL;
+    result->height = m1->height;
+    result->width = m1->width;
+    strcpy(result->type, m1->type);
+    result->ptr = (int**)calloc(result->height, sizeof(int*));
+    if(result->ptr==NULL){
+        free(result);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height; i++){
+        *(result->ptr+i) = (int*)calloc(result->width, sizeof(int));
+        if(*(result->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ;j--){
+                free(*(result->ptr+j));
+            }
+            free(result->ptr);
+            free(result);
+            return NULL;
+        }
+    }
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            *(*(result->ptr+i)+j) = *(*(m1->ptr+m1->height-i-1)+j);
+        }
+    }
+    return result;
+}
+struct image_t* image_flip_vertical(const struct image_t *m1){
+    if(m1==NULL || m1->width < 1 || m1->height < 1 || strcmp(m1->type,"P2") || m1->ptr==NULL)
+        return NULL;
+
+    struct image_t * result = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(result==NULL)
+        return NULL;
+    result->height = m1->height;
+    result->width = m1->width;
+    strcpy(result->type, m1->type);
+    result->ptr = (int**)calloc(result->height, sizeof(int*));
+    if(result->ptr==NULL){
+        free(result);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height; i++){
+        *(result->ptr+i) = (int*)calloc(result->width, sizeof(int));
+        if(*(result->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ;j--){
+                free(*(result->ptr+j));
+            }
+            free(result->ptr);
+            free(result);
+            return NULL;
+        }
+    }
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            *(*(result->ptr+i)+j) =  *(*(m1->ptr+i)+m1->width-1-j);
+        }
+    }
+    return result;
+}
+struct image_t* image_negate(const struct image_t *m1){
+    if(m1==NULL || m1->width < 1 || m1->height < 1 || strcmp(m1->type,"P2") || m1->ptr==NULL)
+        return NULL;
+
+    struct image_t * result = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(result==NULL)
+        return NULL;
+    result->height = m1->height;
+    result->width = m1->width;
+    strcpy(result->type, m1->type);
+    result->ptr = (int**)calloc(result->height, sizeof(int*));
+    if(result->ptr==NULL){
+        free(result);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height; i++){
+        *(result->ptr+i) = (int*)calloc(result->width, sizeof(int));
+        if(*(result->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ;j--){
+                free(*(result->ptr+j));
+            }
+            free(result->ptr);
+            free(result);
+            return NULL;
+        }
+    }
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            *(*(result->ptr+i)+j) = 255 - *(*(m1->ptr+i)+j);
+        }
+    }
+    return result;
+}

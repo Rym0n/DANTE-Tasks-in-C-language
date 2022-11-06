@@ -1,0 +1,45 @@
+Co dwa pliki, to nie jeden
+
+
+#include<stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+int main(){
+    FILE *first;
+    FILE *sec;
+    char file_name[31];
+    int temp;
+    printf("Podaj sciezke do pliku wejsciowego: ");
+    scanf("%30[^\n]s", file_name);
+
+    while(getchar()!='\n');
+
+    if((first=fopen(file_name, "r"))==NULL){
+        printf("Couldn't open file");
+        return 4;
+    }
+
+    *file_name=0;
+
+    printf("Podaj sciezke do pliku wyjsciowego: ");
+    scanf("%30[^\n]s", file_name);
+
+    if((sec=fopen(file_name, "w"))==NULL){
+        printf("Couldn't create file");
+        fclose(first);
+        return 5;
+    }
+
+    for(;;){
+        temp=fgetc(first);
+        if(temp==EOF){
+            break;
+        }
+        fputc(temp, sec);
+    }
+
+    fclose(first);
+    fclose(sec);
+    printf("File copied");
+    return 0;
+}

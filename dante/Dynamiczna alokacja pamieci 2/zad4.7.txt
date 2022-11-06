@@ -1,0 +1,375 @@
+Lustrzane odbicia
+
+Napisz program, który wykona podstawowe operacje transformacji na obrazach bitowych (bitmapach). Formatem wejściowym będzie PNM.
+
+Format PNM (ang. Portable anymap) jest formatem zapisu grafiki rastrowej. Zapoznaj się ze specyfikacją formatu i na podstawie tego przygotuj strukturę image_t do przechowywania obrazu o następującej postaci:
+
+
+.	main.c
+
+
+#include "image_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main() {
+    char *txt = (char*)calloc(40, sizeof(char));
+    if(!txt)
+        return printf("Failed to allocate memory"), 8;
+
+    printf("Podaj nazwe pliku:");
+
+    fgets(txt,40,stdin);
+    if(strlen(txt)>39) while(getchar()!='\n');
+    if(*(txt+strlen(txt)-1)=='\n') *(txt+strlen(txt)-1)='\0';
+    int er=0;
+    struct image_t * wsk = load_image_t(txt, &er);
+    if(er==2)
+        return printf("Couldn't open file"), free(txt),4;
+    if(er==3)
+        return printf("File corrupted"), free(txt),6;
+    if(er==4)
+        return printf("Failed to allocate memory"), free(txt),8;
+
+    struct image_t * hori = image_flip_horizontal(wsk);
+    if(!hori){
+        destroy_image(&wsk);
+        free(txt);
+        return printf("Failed to allocate memory"), 8;
+    }
+    char * help = (char*)calloc(strlen(txt)+10, sizeof(char));
+    if(!help){
+        destroy_image(&hori);
+        destroy_image(&wsk);
+        free(txt);
+        return printf("Failed to allocate memory"), 8;
+    }
+    strcpy(help,"mirror_h_");
+    strcat(help, txt);
+    er = save_image_t(help, hori);
+    if(er!=0){
+        printf("Couldn't create file\n");
+    } else{
+        printf("File saved\n");
+    }
+    destroy_image(&hori);
+    free(help);
+    struct image_t * vertical = image_flip_vertical(wsk);
+    help = (char*)calloc(strlen(txt)+10, sizeof(char));
+    if(!help){
+        destroy_image(&vertical);
+        destroy_image(&wsk);
+        free(txt);
+        return printf("Failed to allocate memory"), 8;
+    }
+    strcpy(help,"mirror_v_");
+    strcat(help, txt);
+    er = save_image_t(help, vertical);
+    if(er!=0){
+        printf("Couldn't create file\n");
+    } else{
+        printf("File saved\n");
+    }
+    destroy_image(&vertical);
+    free(help);
+
+    struct image_t * invert = image_negate(wsk);
+    help = (char*)calloc(strlen(txt)+10, sizeof(char));
+    if(!help){
+        free(txt);
+        destroy_image(&invert);
+        return printf("Failed to allocate memory"), 8;
+    }
+    strcpy(help,"invert_");
+    strcat(help, txt);
+    er = save_image_t(help, invert);
+    if(er!=0){
+        printf("Couldn't create file\n");
+    } else{
+        printf("File saved\n");
+    }
+    destroy_image(&invert);
+    destroy_image(&wsk);
+    free(help);
+    free(txt);
+}
+
+
+image_utils.c
+
+#include "image_utils.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+
+int save_image_t(const char * filename, const struct image_t *m1){
+    if(filename==NULL || m1==NULL || m1->ptr==NULL || m1->height<1 || m1->width<1)
+        return 1;
+
+    FILE * f = fopen(filename, "w");
+    if(f==NULL)
+        return 2;
+
+    if(fprintf(f,"%s\n",m1->type)<=0)
+        return fclose(f), 3;
+    if(fprintf(f,"%d %d\n", m1->width,m1->height)<=0)
+        return fclose(f), 3;
+    if(fprintf(f,"255\n")<=0)
+        return fclose(f), 3;
+
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            if(fprintf(f, "%d ", *(*(m1->ptr+i)+j))<=0)
+                return fclose(f), 3;
+        }
+        if(fprintf(f, "\n")<=0)
+            return fclose(f), 3;
+    }
+    fclose(f);
+    return 0;
+}
+
+
+void destroy_image(struct image_t **m){
+    if(!m)
+        return;
+    for(int i = 0 ; i< (*m)->height ; i++){
+        free(*((*m)->ptr+i));
+    }
+
+    free((*m)->ptr);
+    free((*m));
+    *m=NULL;
+}
+
+struct image_t* load_image_t(const char *filename, int *err_code){
+    if(err_code)
+        *err_code=0;
+    if(filename==NULL){
+        if(err_code)
+            *err_code=1;
+        return NULL;
+    }
+
+    FILE * f = fopen(filename, "r");
+    if(!f){
+        if(err_code)
+            *err_code = 2;
+        return NULL;
+    }
+
+    struct image_t *res = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(res==NULL){
+        if(err_code)
+            *err_code = 4;
+        fclose(f);
+        return NULL;
+    }
+
+
+
+    fgets(res->type,3,f);
+    if(strlen(res->type)>2) while(getchar()!='\n');
+    if(*(res->type+strlen(res->type)-1)=='\n') *(res->type+strlen(res->type)-1)='\0';
+
+    if(strcmp(res->type,"P2")!=0){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    if(fscanf(f, "%d %d", &(res->width), &(res->height))!=2){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    if(res->width<1 || res->height<1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    res->ptr = (int**)calloc(res->height, sizeof(int*));
+    if(!res->ptr){
+        if(err_code)
+            *err_code = 4;
+        fclose(f);
+        free(res);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < res->height ; i++){
+        *(res->ptr+i)=(int*)calloc(res->width, sizeof(int));
+        if(*(res->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ; j--){
+                free(*(res->ptr+j));
+            }
+            if(err_code)
+                *err_code = 4;
+            fclose(f);
+            free(res->ptr);
+            free(res);
+            return NULL;
+        }
+    }
+
+    int a = 0;
+    if(fscanf(f, "%d", &a)!=1){
+        if(err_code)
+            *err_code = 3;
+        fclose(f);
+        destroy_image(&res);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < res->height ; i++){
+        for(int j = 0 ; j < res->width ; j++){
+            if(fscanf(f, "%d",&a)!=1){
+                if(err_code)
+                    *err_code = 3;
+                fclose(f);
+                destroy_image(&res);
+                return NULL;
+            }
+            *(*(res->ptr+i)+j) = a;
+        }
+    }
+    fclose(f);
+    return res;
+}
+
+struct image_t* image_flip_horizontal(const struct image_t *m1){
+    if(m1==NULL || m1->width < 1 || m1->height < 1 || strcmp(m1->type,"P2") || m1->ptr==NULL)
+        return NULL;
+
+    struct image_t * result = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(result==NULL)
+        return NULL;
+    result->height = m1->height;
+    result->width = m1->width;
+    strcpy(result->type, m1->type);
+    result->ptr = (int**)calloc(result->height, sizeof(int*));
+    if(result->ptr==NULL){
+        free(result);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height; i++){
+        *(result->ptr+i) = (int*)calloc(result->width, sizeof(int));
+        if(*(result->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ;j--){
+                free(*(result->ptr+j));
+            }
+            free(result->ptr);
+            free(result);
+            return NULL;
+        }
+    }
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            *(*(result->ptr+i)+j) = *(*(m1->ptr+m1->height-i-1)+j);
+        }
+    }
+    return result;
+}
+struct image_t* image_flip_vertical(const struct image_t *m1){
+    if(m1==NULL || m1->width < 1 || m1->height < 1 || strcmp(m1->type,"P2") || m1->ptr==NULL)
+        return NULL;
+
+    struct image_t * result = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(result==NULL)
+        return NULL;
+    result->height = m1->height;
+    result->width = m1->width;
+    strcpy(result->type, m1->type);
+    result->ptr = (int**)calloc(result->height, sizeof(int*));
+    if(result->ptr==NULL){
+        free(result);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height; i++){
+        *(result->ptr+i) = (int*)calloc(result->width, sizeof(int));
+        if(*(result->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ;j--){
+                free(*(result->ptr+j));
+            }
+            free(result->ptr);
+            free(result);
+            return NULL;
+        }
+    }
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            *(*(result->ptr+i)+j) =  *(*(m1->ptr+i)+m1->width-1-j);
+        }
+    }
+    return result;
+}
+struct image_t* image_negate(const struct image_t *m1){
+    if(m1==NULL || m1->width < 1 || m1->height < 1 || strcmp(m1->type,"P2") || m1->ptr==NULL)
+        return NULL;
+
+    struct image_t * result = (struct image_t*)calloc(1, sizeof(struct image_t));
+    if(result==NULL)
+        return NULL;
+    result->height = m1->height;
+    result->width = m1->width;
+    strcpy(result->type, m1->type);
+    result->ptr = (int**)calloc(result->height, sizeof(int*));
+    if(result->ptr==NULL){
+        free(result);
+        return NULL;
+    }
+
+    for(int i = 0 ; i < result->height; i++){
+        *(result->ptr+i) = (int*)calloc(result->width, sizeof(int));
+        if(*(result->ptr+i)==NULL){
+            for(int j = i-1 ; j>=0 ;j--){
+                free(*(result->ptr+j));
+            }
+            free(result->ptr);
+            free(result);
+            return NULL;
+        }
+    }
+    for(int i = 0 ; i < m1->height ; i++){
+        for(int j = 0 ; j < m1->width ; j++){
+            *(*(result->ptr+i)+j) = 255 - *(*(m1->ptr+i)+j);
+        }
+    }
+    return result;
+}
+
+image_utils.h
+
+#ifndef PROJECT1_IMAGE_UTILS_H
+#define PROJECT1_IMAGE_UTILS_H
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+struct image_t {
+    char type[3];
+    int **ptr;
+    int width;
+    int height;
+};
+
+struct image_t* load_image_t(const char *filename, int *err_code);
+int save_image_t(const char * filename, const struct image_t *m1);
+
+void destroy_image(struct image_t **m);
+struct image_t* image_flip_horizontal(const struct image_t *m1);
+struct image_t* image_flip_vertical(const struct image_t *m1);
+struct image_t* image_negate(const struct image_t *m1);
+
+#endif //PROJECT1_IMAGE_UTILS_H

@@ -1,0 +1,434 @@
+Lista dwukierunkowa
+
+Napisz program pozwalający użytkownikowi na wykonywanie dowolnej operacji na liście dwukierunkowej z poziomu konsoli (menu tekstowe).
+
+W tym celu zaimplementuj listę wiązaną dwukierunkową, opartą o następujące struktury oraz API:
+
+
+doubly_linked_list.c
+#include <stdio.h>
+#include <stdlib.h>
+#include "doubly_linked_list.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+struct doubly_linked_list_t* dll_create()
+{
+    return calloc(1, sizeof(struct doubly_linked_list_t));
+}
+int dll_push_back(struct doubly_linked_list_t* dll, int value)
+{
+    if (!dll || (dll->head && !dll->tail) || (!dll->head && dll->tail)) return 1;
+    struct node_t *node = malloc(sizeof(struct node_t));
+    if (!node) return 2;
+    node->data = value;
+    node->next = NULL;
+    if (!dll->head) {
+        node->prev = NULL;
+        dll->head = node;
+        dll->tail = node;
+        return 0;
+    }
+    dll->tail->next = node;
+    node->prev = dll->tail;
+    dll->tail = node;
+    return 0;
+}
+int dll_push_front(struct doubly_linked_list_t* dll, int value)
+{
+    if (!dll || (dll->head && !dll->tail) || (!dll->head && dll->tail)) return 1;
+    struct node_t *node = malloc(sizeof(struct node_t));
+    if (!node) return 2;
+    node->data = value;
+    node->prev = NULL;
+    if (!dll->tail) {
+        node->next = NULL;
+        dll->head = node;
+        dll->tail = node;
+        return 0;
+    }
+    dll->head->prev = node;
+    node->next = dll->head;
+    dll->head = node;
+    return 0;
+}
+int dll_pop_front(struct doubly_linked_list_t* dll, int *err_code)
+{
+    if (!dll || !dll->head || !dll->tail) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+    if (err_code) *err_code = 0;
+    int value = dll->head->data;
+    if (dll->tail == dll->head) {
+        free(dll->head);
+        dll->head = NULL;
+        dll->tail = NULL;
+        return value;
+    }
+    struct node_t *tmp = dll->head;
+    dll->head = tmp->next;
+    dll->head->prev = NULL;
+    free(tmp);
+    return value;
+}
+int dll_pop_back(struct doubly_linked_list_t* dll, int *err_code)
+{
+    if (!dll || !dll->head || !dll->tail) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+    if (err_code) *err_code = 0;
+    int value = dll->tail->data;
+    if (dll->tail == dll->head) {
+        free(dll->head);
+        dll->head = NULL;
+        dll->tail = NULL;
+        return value;
+    }
+    struct node_t *tmp = dll->tail;
+    dll->tail = tmp->prev;
+    dll->tail->next = NULL;
+    free(tmp);
+    return value;
+}
+int dll_back(const struct doubly_linked_list_t* dll, int *err_code)
+{
+    if (!dll || !dll->head || !dll->tail) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+    if (err_code) *err_code = 0;
+    return dll->tail->data;
+}
+int dll_front(const struct doubly_linked_list_t* dll, int *err_code)
+{
+    if (!dll || !dll->head || !dll->tail) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+    if (err_code) *err_code = 0;
+    return dll->head->data;
+}
+struct node_t* dll_begin(struct doubly_linked_list_t* dll)
+{
+    if (!dll || !dll->head || !dll->tail) return NULL;
+    return dll->head;
+}
+struct node_t* dll_end(struct doubly_linked_list_t* dll)
+{
+    if (!dll || !dll->head || !dll->tail) return NULL;
+    return dll->tail;
+}
+int dll_size(const struct doubly_linked_list_t* dll)
+{
+    if (!dll || (dll->head && !dll->tail) || (!dll->head && dll->tail)) return -1;
+    struct node_t *tmp = dll->head;
+    int size = 0;
+    while (tmp) {
+        tmp = tmp->next;
+        size++;
+    }
+    return size;
+}
+int dll_is_empty(const struct doubly_linked_list_t* dll)
+{
+    if (!dll || (dll->head && !dll->tail) || (!dll->head && dll->tail)) return -1;
+    if (dll->head) return 0;
+    else return 1;
+}
+int dll_at(const struct doubly_linked_list_t* dll, unsigned int index, int *err_code)
+{
+    if (!dll || !dll->head || !dll->tail || (int)index >= dll_size(dll)) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+    struct node_t *tmp = dll->head;
+    for (unsigned i = 0; i < index; ++i) tmp = tmp->next;
+    if (err_code) *err_code = 0;
+    return tmp->data;
+}
+int dll_insert(struct doubly_linked_list_t* dll, unsigned int index, int value)
+{
+    if (!dll || (dll->head && !dll->tail) || (!dll->head && dll->tail) || (int)index > dll_size(dll) || (int)index < 0) return 1;
+    if ((int)index == 0) return dll_push_front(dll, value);
+    if ((int)index == dll_size(dll)) return dll_push_back(dll, value);
+    struct node_t *node = malloc(sizeof(struct node_t)), *next = dll->head;
+    if(!node) return 2;
+    node->data=value;
+    for (unsigned i = 0; i < index; ++i) next = next->next;
+    node->next = next;
+    node->prev = next->prev;
+    node->next->prev = node;
+    node->prev->next = node;
+    return 0;
+}
+int dll_remove(struct doubly_linked_list_t* dll, unsigned int index, int *err_code)
+{
+    if (!dll || !dll->head || !dll->tail || (int)index >= dll_size(dll) || (int)index < 0) {
+        if (err_code) *err_code = 1;
+        return 0;
+    }
+    if(err_code) *err_code=0;
+    if((int)index == 0) return dll_pop_front(dll, NULL);
+    if((int)index == dll_size(dll) - 1) return dll_pop_back(dll, NULL);
+    struct node_t *tmp = dll->head;
+    for (unsigned i = 0; i < index; ++i) tmp = tmp->next;
+    int value = tmp->data;
+    tmp->next->prev = tmp->prev;
+    tmp->prev->next = tmp->next;
+    free(tmp);
+    return value;
+}
+void dll_clear(struct doubly_linked_list_t* dll)
+{
+    if (!dll) return;
+    struct node_t *tmp = dll->head;
+    while (tmp) {
+        dll->head = tmp->next;
+        free(tmp);
+        tmp = dll->head;
+    }
+    dll->head = NULL;
+    dll->tail = NULL;
+}
+void dll_display(const struct doubly_linked_list_t* dll)
+{
+    if (!dll || !dll->head || !dll->tail) return;
+    struct node_t *tmp = dll->head;
+    while (tmp) {
+        printf("%d ", tmp->data);
+        tmp = tmp->next;
+    }
+}
+void dll_display_reverse(const struct doubly_linked_list_t* dll)
+{
+    if (!dll || !dll->head || !dll->tail) return;
+    struct node_t *tmp = dll->tail;
+    while (tmp) {
+        printf("%d ", tmp->data);
+        tmp = tmp->prev;
+    }
+}
+
+
+doubly_linked_list.h
+
+#ifndef LIST
+#define LIST
+
+struct doubly_linked_list_t
+{
+  struct node_t *head;
+  struct node_t *tail;
+};
+
+struct node_t
+{
+  int data;
+  struct node_t *next;
+  struct node_t *prev;
+};
+struct doubly_linked_list_t* dll_create();
+
+int dll_push_back(struct doubly_linked_list_t* dll, int value);
+int dll_push_front(struct doubly_linked_list_t* dll, int value);
+int dll_pop_front(struct doubly_linked_list_t* dll, int *err_code);
+int dll_pop_back(struct doubly_linked_list_t* dll, int *err_code);
+
+int dll_back(const struct doubly_linked_list_t* dll, int *err_code);
+int dll_front(const struct doubly_linked_list_t* dll, int *err_code);
+
+struct node_t* dll_begin(struct doubly_linked_list_t* dll);
+struct node_t* dll_end(struct doubly_linked_list_t* dll);
+
+int dll_size(const struct doubly_linked_list_t* dll);
+int dll_is_empty(const struct doubly_linked_list_t* dll);
+
+int dll_at(const struct doubly_linked_list_t* dll, unsigned int index, int *err_code);
+
+int dll_insert(struct doubly_linked_list_t* dll, unsigned int index, int value);
+int dll_remove(struct doubly_linked_list_t* dll, unsigned int index, int *err_code);
+
+void dll_clear(struct doubly_linked_list_t* dll);
+
+void dll_display(const struct doubly_linked_list_t* dll);
+void dll_display_reverse(const struct doubly_linked_list_t* dll);
+
+#endif
+
+
+main.c
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "doubly_linked_list.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main()
+{
+    struct doubly_linked_list_t *dll = dll_create();
+    if (!dll) {
+        printf("Failed to allocate memory");
+        return 8;
+    }
+    while (1) {
+        printf("Co chcesz zrobic ");
+        int op;
+        int err = scanf("%d", &op);
+        if (err != 1) {
+            printf("Incorrect input");
+            dll_clear(dll);
+            free(dll);
+            return 1;
+        }
+        int x;
+        unsigned index;
+        switch (op) {
+        case 0:
+            dll_clear(dll);
+            free(dll);
+            return 0;
+        case 1:
+            printf("Podaj liczbe ");
+            err = scanf("%d", &x);
+            if (err != 1) {
+                printf("Incorrect input");
+                dll_clear(dll);
+                free(dll);
+                return 1;
+            }
+            err = dll_push_back(dll, x);
+            if (err == 2) {
+                printf("Failed to allocate memory");
+                dll_clear(dll);
+                free(dll);
+                return 8;
+            }
+            break;
+        case 2:
+            if (dll_is_empty(dll)) printf("List is empty\n");
+            else {
+                int x = dll_pop_back(dll, NULL);
+                printf("%d\n", x);
+            }
+            break;
+        case 3:
+            printf("Podaj liczbe ");
+            err = scanf("%d", &x);
+            if (err != 1) {
+                printf("Incorrect input");
+                dll_clear(dll);
+                free(dll);
+                return 1;
+            }
+            err = dll_push_front(dll, x);
+            if (err == 2) {
+                printf("Failed to allocate memory");
+                dll_clear(dll);
+                free(dll);
+                return 8;
+            }
+            break;
+        case 4:
+            if (dll_is_empty(dll)) printf("List is empty\n");
+            else {
+                int x = dll_pop_front(dll, NULL);
+                printf("%d\n", x);
+            }
+            break;
+        case 5:
+            printf("Podaj liczbe ");
+            err = scanf("%d", &x);
+            if (err != 1) {
+                printf("Incorrect input");
+                dll_clear(dll);
+                free(dll);
+                return 1;
+            }
+            printf("Podaj indeks ");
+            err = scanf("%u", &index);
+            if (err != 1) {
+                printf("Incorrect input");
+                dll_clear(dll);
+                free(dll);
+                return 1;
+            }
+            err = dll_insert(dll, index, x);
+            if (err == 1) printf("Index out of range\n");
+            if (err == 2) {
+                printf("Failed to allocate memory");
+                dll_clear(dll);
+                free(dll);
+                return 8;
+            }
+            break;
+        case 6:
+            if (dll_is_empty(dll)) {
+                printf("List is empty\n");
+                break;
+            }
+            printf("Podaj indeks: ");
+            err = scanf("%u", &index);
+            if (err != 1) {
+                printf("Incorrect input");
+                dll_clear(dll);
+                free(dll);
+                return 1;
+            }
+            int x = dll_remove(dll, index, &err);
+            if (err == 1) printf("Index out of range\n");
+            else printf("%d\n", x);
+            break;
+        case 7:
+            if (dll_is_empty(dll)) printf("List is empty\n");
+            else printf("%d\n", dll_back(dll, NULL));
+            break;
+        case 8:
+            if (dll_is_empty(dll)) printf("List is empty\n");
+            else printf("%d\n", dll_front(dll, NULL));
+            break;
+        case 9:
+            printf("%d\n", dll_is_empty(dll));
+            break;
+        case 10:
+            printf("%d\n", dll_size(dll));
+            break;
+        case 11:
+            dll_clear(dll);
+            break;
+        case 12:
+            if (dll_is_empty(dll)) {
+                printf("List is empty\n");
+                break;
+            }
+            printf("Podaj indeks: ");
+            err = scanf("%u", &index);
+            if (err != 1) {
+                printf("Incorrect input");
+                dll_clear(dll);
+                free(dll);
+                return 1;
+            }
+            x = dll_at(dll, index, &err);
+            if (err == 1) printf("Index out of range\n");
+            else printf("%d\n", x);
+            break;
+        case 13:
+            if (dll_is_empty(dll)) printf("List is empty");
+            else dll_display(dll);
+            printf("\n");
+            break;
+        case 14:
+            if (dll_is_empty(dll)) printf("List is empty");
+            else dll_display_reverse(dll);
+            printf("\n");
+            break;
+        default:
+            printf("Incorrect input data\n");
+        }
+    }
+}

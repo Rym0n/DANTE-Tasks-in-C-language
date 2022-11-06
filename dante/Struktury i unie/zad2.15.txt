@@ -1,0 +1,96 @@
+Zapis double do pliku
+
+Napisz program do zapisu/odczytu liczby typu double poprzez tablice bajtów do pliku tekstowego.
+
+Przygotuj unię do przechowywania liczby double oraz ośmiobajtowej tablicy znaków:
+
+
+#include <stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+
+union double_to_char_t {
+    double d;
+    char tab[8];
+};
+
+
+int save_double(const union double_to_char_t *dtc, const char *filename) {
+    if (!dtc || !filename)      return 1;
+    FILE *f = fopen(filename, "w");
+    if (!f)                     return 2;
+    for (int i = 0; i < 8; ++i) {
+        fwrite(dtc->tab + i, sizeof(char), 1, f);
+    }
+    fclose(f);
+    return 0;
+}
+
+
+int load_double(union double_to_char_t *dtc, const char *filename) {
+    if (!dtc || !filename)      return 1;
+    FILE *f = fopen(filename, "r");
+    if (!f)                     return 2;
+    for (int i = 0; i < 8; ++i) {
+        if (fread(dtc->tab + i, sizeof(char), 1, f) < 1) {
+            fclose(f);
+            return 3;
+        }
+    }
+
+    fclose(f);
+    return 0;
+}
+
+
+void get_line(char *str, int size) {
+    char c;
+    for (int i = 0; i < size; ++i) {
+        c = getchar();
+        if (c == '\n') {
+            *(str + i) = '\0';
+            return;
+        } else if (i + 1 == size) {
+            i--;
+        } else {
+            *(str + i) = c;
+        }
+    }
+}
+
+
+int main() {
+    double liczba;
+    printf("Podaj liczbe: ");
+    if (scanf("%lf", &liczba) != 1) {
+        printf("Incorrect input");
+        return 1;
+    }
+    getchar();
+    union double_to_char_t unia;
+    unia.d = liczba;
+    char filename[40];
+    printf("Podaj nazwe pliku: ");
+    get_line(filename, 40);
+    int x = save_double(&unia, filename);
+    if (x == 2) {
+        printf("Couldn't create file");
+        return 5;
+    }
+    printf("File saved\n");
+    printf("Podaj nazwe pliku: ");
+    get_line(filename, 40);
+    union double_to_char_t unia2;
+    x = load_double(&unia2, filename);
+    if (x == 2) {
+        printf("Couldn't open file");
+        return 4;
+    } else if (x == 3) {
+        printf("File corrupted");
+        return 6;
+    }
+    printf("%lf\n", unia2.d);
+    return 0;
+}

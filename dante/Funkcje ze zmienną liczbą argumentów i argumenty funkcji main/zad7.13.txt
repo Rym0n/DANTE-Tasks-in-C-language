@@ -1,0 +1,77 @@
+Licznik słów
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <ctype.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int* count_words(const char *filename, int *err_code, int N, ...);
+int main(int argc, char **argv)
+{
+    if (argc <= 2) {
+        printf("Not enough arguments");
+        return 9;
+    }
+    int err;
+    for(int i = 2; i < argc; ++i) {
+        int *array = count_words(*(argv + 1), &err, 1, *(argv + i));
+        if(err == 2) {
+            printf("Couldn't open file");
+            return 4;
+        }
+        if(err == 3) {
+            printf("Failed to allocate memory");
+            return 8;
+        }
+        printf("%d\n", *array);
+        free(array);
+    }
+    return 0;
+}
+int* count_words(const char *filename, int *err_code, int N, ...)
+{
+    if (!filename || N <= 0) {
+        if (err_code) *err_code = 1;
+        return NULL;
+    }
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        if (err_code) *err_code = 2;
+        return NULL;
+    }
+    int *array = calloc(N, sizeof(int));
+    if (!array) {
+        if (err_code) *err_code = 3;
+        fclose(f);
+        return NULL;
+    }
+    va_list v1;
+    va_start(v1, N);
+    for(int i = 0;  i < N; ++i) {
+        fseek(f, 0, SEEK_SET);
+        int start_flag = 1;
+        char *tmp = va_arg(v1, char*);
+        for (int j = 0; !feof(f);) {
+            char c = fgetc(f);
+            if (j == (int)strlen(tmp)) {
+                j = 0;
+                if (!isalnum(c)) (*(array + i))++;
+            }
+            if(!isalnum(c)) start_flag = 1;
+            if(*(tmp + j) == c && start_flag) ++j;
+            else {
+                if(isalnum(c)) start_flag = 0;
+                j = 0;
+            }
+        }
+    }
+    va_end(v1);
+    fclose(f);
+    if (err_code) *err_code = 0;
+    return array;
+}

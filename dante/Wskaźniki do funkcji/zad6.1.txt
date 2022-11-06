@@ -1,0 +1,84 @@
+Funkcja przyjmująca wskaźnik do funkcji
+
+
+int_operations.c
+
+
+#include "int_operations.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int add_int(int a, int b)
+{
+    return a+b;
+}
+
+int sub_int(int a, int b)
+{
+    return a-b;
+}
+
+int div_int(int a, int b)
+{
+    if(b) return a/b;
+    else return 0;
+}
+
+int mul_int(int a, int b)
+{
+    return a*b;
+}
+
+int calculate(int a, int b,int(*wskFun)(int , int))
+{
+    return  (*wskFun)(a,b);
+}
+
+
+int_operations.h
+
+#ifndef INT
+#define INT
+
+int add_int(int a, int b);
+int sub_int(int a, int b);
+int div_int(int a, int b);
+int mul_int(int a, int b);
+int calculate(int a, int b,int(*p)(int , int));
+
+#endif
+
+
+main.c
+
+#include <stdio.h>
+#include "int_operations.h"
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int main() {
+    int(*funcs[4])(int, int);
+    *funcs = add_int;
+    *(funcs+1) = sub_int;
+    *(funcs+2) = div_int;
+    *(funcs+3) = mul_int;
+
+    int fir , sec , calc;
+    printf("Enter numbers:  ");
+    if(scanf("%d %d", &fir, &sec) != 2){
+        printf("Incorrect input");
+        return 1;
+    }
+    printf("Choose an operation: ");
+    if(scanf("%d", &calc) != 1){
+        printf("Incorrect input");
+        return 1;
+    }
+    if(calc!=0 && calc!=1 && calc!=2 && calc!=3){
+        printf("Incorrect input data");
+        return 2;
+    }
+
+    printf("%d",calculate(fir, sec, *(funcs+calc)));
+    return 0;
+}

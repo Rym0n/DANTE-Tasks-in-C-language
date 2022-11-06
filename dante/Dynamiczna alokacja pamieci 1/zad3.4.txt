@@ -1,0 +1,62 @@
+ Alokacja pamięci i funkcje - ciąg dalszy
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int create_array_int(int **ptr, int N){
+    if(N<=0 || ptr==NULL){
+        return 1;
+    }
+    *ptr=(int*)malloc(sizeof(int)*N);
+    if(*ptr==NULL)
+        return 2;
+    return 0;
+
+}
+void destroy_array_int(int **ptr){
+    if(!(ptr==NULL)){
+        free(*ptr);
+        *ptr=NULL;
+    }
+}
+
+int main() {
+    int N, res,res2;
+    int *ptr;
+    printf("Podaj rozmiar tablicy:");
+    res = scanf("%d", &N);
+    if (res == 0) {
+        printf("Incorrect input");
+        return 1;
+    }
+    if (N < 1) {
+        printf("Incorrect input data");
+        return 2;
+    }
+    int temp;
+    temp = create_array_int(&ptr,N);
+    if(temp>0){
+        printf("Failed to allocate memory");
+        return 8;
+    }
+
+    printf("Podaj liczby:");
+    for (int j=0;j<N;j++) {
+        res2 = scanf("%d", &temp);
+        if (res2 != 1) {
+            printf("Incorrect input");
+            destroy_array_int(&ptr);
+            return 1;
+        }
+        (*(ptr+j))=temp;
+    }
+    for(int k=N;k>0;k--){
+        printf("%d ",(*(ptr+k-1)));
+    }
+    destroy_array_int(&ptr);
+    return 0;
+}

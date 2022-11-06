@@ -1,0 +1,31 @@
+A teraz czas na liczby
+
+Napisz program, który pobierze od użytkownika nazwę pliku, a następnie zapisze do niego kolejne liczby całkowite z przedziału <0, 100>. Każda liczba ma znajdować się w nowym wierszu.
+
+
+
+#include <stdio.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+
+int main(){
+    FILE *fp;
+    char nazwa_zmiennej[31];
+    int i;
+
+    printf("Podaj sciezke do pliku:");
+    scanf("%30s",nazwa_zmiennej);
+    if((fp=fopen(nazwa_zmiennej,"w"))==NULL){
+        printf(" Couldn't create file ");
+        return 5;
+    }
+    for(i=0;i<101;i++){
+        fprintf(fp,"%d",i);
+        fprintf(fp,"\n");
+    }
+
+    fclose(fp);
+    printf("File saved");
+    return 0;
+}

@@ -1,0 +1,52 @@
+incepcja 
+
+Napisz funkcję, która w sposób rekurencyjny będzie wyświetlała zawartości plików zawierających nazwy plików w oddzielnych wierszach, Nazwy plików w plikach będą podane każda w osobnej linii. Nazwy nie przekroczą 30 znaków.
+
+
+#include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include "tested_declarations.h"
+#include "rdebug.h"
+
+int read_file(const char *filename);
+
+int main()
+{
+    int x;
+    char nazwa_zmiennej[31];
+    printf("Podaj sciezke do pliku:");
+    scanf("%30s",nazwa_zmiennej);
+    x=read_file(nazwa_zmiennej);
+    if(x==0){
+        printf("Couldn't open file");
+        return 4;
+    }
+    printf("%d",x);
+
+    return 0;
+}
+
+
+int read_file(const char *filename){
+    if(filename==NULL){
+        return -1;
+    }
+    FILE *fp;
+    fp=fopen(filename,"r");
+    if(fp==NULL){
+        return 0;
+    }
+    char tab[31]={'0'};
+    int temp=1;
+    char*holder;
+
+    while(fgets(tab, 31, fp)){
+        holder = strtok(tab,"\n");
+        printf("%s\n",holder);
+        temp+=read_file(holder);
+    }
+    fclose(fp);
+    return temp;
+}
